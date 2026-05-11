@@ -53,9 +53,18 @@ local function trackCombatEvent()
 end
 
 local clf = CreateFrame("Frame")
-clf:RegisterEvent("PLAYER_REGEN_DISABLED")
-clf:RegisterEvent("PLAYER_REGEN_ENABLED")
-clf:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+-- WoW 12.0 surfaces "ADDON_ACTION_FORBIDDEN" on Frame:RegisterEvent for
+-- COMBAT_LOG_EVENT_UNFILTERED in some load contexts (cause is opaque — other
+-- damage meters succeed). Wrap in pcall so a failure doesn't abort the file
+-- load; the addon stays functional with Details!/Recount/Skada/Manual sources.
+DPSSource._builtinAvailable = true
+local function safeRegister(event)
+    local ok = pcall(function() clf:RegisterEvent(event) end)
+    if not ok then DPSSource._builtinAvailable = false end
+end
+safeRegister("PLAYER_REGEN_DISABLED")
+safeRegister("PLAYER_REGEN_ENABLED")
+safeRegister("COMBAT_LOG_EVENT_UNFILTERED")
 clf:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_REGEN_DISABLED" then
         wipe(builtin.totalDamage)
@@ -208,7 +217,7 @@ function DPSSource:GetHPS(name)
 end
 
 function DPSSource:IsAvailable(source)
-    if source == "BUILTIN" then return true end
+    if source == "BUILTIN" then return DPSSource._builtinAvailable and true or false end
     if source == "DETAILS" then return _G.Details ~= nil end
     if source == "RECOUNT" then return _G.Recount ~= nil end
     if source == "SKADA"   then return _G.Skada ~= nil end
@@ -218,7 +227,9 @@ end
 function DPSSource:ActiveSourceLabel()
     local src = SplitW:GetDB().dpsSource
     if src == "BUILTIN" then
-        if builtin.snapshotDuration > 0 then
+        if not DPSSource._builtinAvailable then
+            return "Built-in (blocked by Blizzard event protection)"
+        elseif builtin.snapshotDuration > 0 then
             return string.format("Built-in (last combat: %ds)", math.floor(builtin.snapshotDuration + 0.5))
         elseif builtin.combatStart then
             return "Built-in (combat in progress)"

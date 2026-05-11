@@ -335,16 +335,18 @@ local function buildSetupPage(parent)
     -- Defensive: re-register isn't needed.
 
     -- ---- Source preview (live read of DPS+HPS for the current roster) ----
-    local sourcePrevSection = makeSection(parent, L["Source preview"], 14, -250, "setup.source_preview", 640)
+    -- Spans full width below the Permission status section (which sits on the
+    -- right at y=-250). Pushed down to y=-340 so the two don't overlap.
+    local sourcePrevSection = makeSection(parent, L["Source preview"], 14, -340, "setup.source_preview", 640)
     local hintFS = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    hintFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -274)
+    hintFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -364)
     hintFS:SetWidth(640); hintFS:SetJustifyH("LEFT")
     hintFS:SetText(L["Live values read from the selected source for the current (or test) roster."])
     _registerInSection(hintFS)
 
     local previewScroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
-    previewScroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -292)
-    previewScroll:SetSize(640, 160)
+    previewScroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -382)
+    previewScroll:SetSize(640, 110)
     local previewContent = CreateFrame("Frame", nil, previewScroll)
     previewContent:SetSize(620, 1)
     previewScroll:SetScrollChild(previewContent)

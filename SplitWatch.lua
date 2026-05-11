@@ -14,7 +14,7 @@ SplitW.Defaults = {
     weightMin     = 1,
     weightMax     = 100,
     weightDefault = 50,
-    dpsSource     = "BUILTIN", -- BUILTIN | DETAILS | RECOUNT | SKADA | MANUAL — Built-in parses the combat log natively, zero addon dependency.
+    dpsSource     = "DETAILS", -- DETAILS | RECOUNT | SKADA | BUILTIN | MANUAL — Details! by default since it's the most accurate and most users have it. Built-in (combat log parser) is currently blocked by Blizzard event protection on retail 12.0 — kept in the dropdown but auto-degrades to MANUAL when unavailable.
     autoRefresh   = false,    -- auto-rescan after each combat ends
 
     -- Per-player manual weights: { ["Name"] = 50, ... }
