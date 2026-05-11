@@ -11,9 +11,44 @@ local selectTab
 local refresh
 
 -- Currently-being-built section: widget factories push themselves into it so
--- collapse/reset operate on the right list. Reset via makeSection() at top of
--- each page section.
+-- collapse/reset operate on the right list.
 local _currentSection = nil
+-- Chain of last-built section per page (so subsequent sections anchor to the
+-- previous section's BOTTOMLEFT, which makes the lower sections move up when
+-- an upper section is collapsed).
+local _lastSectionOnPage = {}
+local _allSectionsOnPage = {}
+
+local SECTION_GAP = 18
+local COLLAPSED_HEIGHT = 22
+
+-- Capture all of widget's SetPoint anchors, reparent it onto the container, and
+-- re-anchor it relative to the container. y offsets are translated from page-
+-- relative to container-relative by subtracting the section's origin y.
+local function _captureAndReparent(widget, container, sectionOriginY)
+    if not widget or not widget.GetPoint or not widget.SetPoint or not widget.SetParent then return end
+    local nPoints = widget.GetNumPoints and widget:GetNumPoints() or 0
+    if nPoints == 0 then return end
+    local pageRoot = container:GetParent()
+    local saved = {}
+    for i = 1, nPoints do
+        local p, relTo, relPoint, x, y = widget:GetPoint(i)
+        saved[i] = { p = p, relTo = relTo, relPoint = relPoint, x = x or 0, y = y or 0 }
+    end
+    widget:SetParent(container)
+    widget:ClearAllPoints()
+    for _, a in ipairs(saved) do
+        local relTo = a.relTo
+        local newY  = a.y
+        -- If the widget was anchored to the page itself, switch its anchor to
+        -- the container at an equivalent local Y so it tracks container moves.
+        if relTo == pageRoot or relTo == nil then
+            relTo = container
+            newY  = a.y - sectionOriginY
+        end
+        widget:SetPoint(a.p, relTo, a.relPoint, a.x, newY)
+    end
+end
 
 local function _registerInSection(widget, dbKey)
     if not _currentSection or not widget then return end
@@ -21,6 +56,7 @@ local function _registerInSection(widget, dbKey)
     if dbKey then
         _currentSection.dbKeys[#_currentSection.dbKeys + 1] = dbKey
     end
+    _captureAndReparent(widget, _currentSection.container, _currentSection._originY)
     if _currentSection._collapsed and widget.Hide then widget:Hide() end
 end
 
@@ -194,45 +230,92 @@ local function makeSection(parent, title, x, y, key, width)
         dbKeys   = {},
         key      = key,
         parent   = parent,
-        _origin  = y,
+        _originY = y,
     }
 
-    local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    header:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+    -- Container frame: chains under the previous section on this page so when
+    -- one is collapsed the rest move up automatically. First section anchors
+    -- at the requested page-level (x, y); the right edge always sticks to the
+    -- page's right edge for a consistent full-width look.
+    local container = CreateFrame("Frame", nil, parent)
+    local prev = _lastSectionOnPage[parent]
+    if prev then
+        container:SetPoint("TOPLEFT",  prev.container, "BOTTOMLEFT", 0, -SECTION_GAP)
+        container:SetPoint("TOPRIGHT", prev.container, "BOTTOMRIGHT", 0, -SECTION_GAP)
+    else
+        container:SetPoint("TOPLEFT",  parent, "TOPLEFT",  x, y)
+        container:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -8, y)
+    end
+    container:SetHeight(COLLAPSED_HEIGHT)
+    section.container = container
+    _lastSectionOnPage[parent] = section
+    _allSectionsOnPage[parent] = _allSectionsOnPage[parent] or {}
+    _allSectionsOnPage[parent][#_allSectionsOnPage[parent] + 1] = section
+
+    -- Header (inside container at relative top so it moves with the container)
+    local header = container:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    header:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
     header:SetText(title)
     header:SetTextColor(1, 0.82, 0)
     section.header = header
 
-    local chevron = parent:CreateTexture(nil, "OVERLAY")
+    local chevron = container:CreateTexture(nil, "OVERLAY")
     chevron:SetSize(14, 14)
     chevron:SetPoint("LEFT", header, "RIGHT", 4, -1)
     chevron:SetTexture(TEX_EXPANDED)
     section.chevron = chevron
 
-    -- Reset button at the right edge (built first so click area can stop before it)
-    local btnReset = CreateFrame("Button", nil, parent)
+    -- Reset button at the right edge of the container
+    local btnReset = CreateFrame("Button", nil, container)
     btnReset:SetSize(14, 14)
-    btnReset:SetPoint("TOPLEFT", parent, "TOPLEFT", x + width - 18, y - 2)
+    btnReset:SetPoint("TOPRIGHT", container, "TOPRIGHT", -8, -2)
     btnReset:SetNormalTexture("Interface\\Buttons\\UI-RefreshButton")
     btnReset:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
-    btnReset:SetFrameLevel(parent:GetFrameLevel() + 6)
+    btnReset:SetFrameLevel(container:GetFrameLevel() + 6)
     section.resetBtn = btnReset
 
-    -- Click area: cover the whole header-line strip except where the reset button
-    -- sits. Use two SetPoints so the area stretches with the requested width and
-    -- doesn't depend on the FontString's measured size (which is 0 at build time).
-    local clickArea = CreateFrame("Button", nil, parent)
-    clickArea:SetPoint("TOPLEFT",     parent, "TOPLEFT", x - 4,            y + 4)
-    clickArea:SetPoint("BOTTOMRIGHT", parent, "TOPLEFT", x + width - 22,   y - 14)
-    clickArea:SetFrameLevel(parent:GetFrameLevel() + 5)
+    -- Click area: the header strip, minus the reset-button zone
+    local clickArea = CreateFrame("Button", nil, container)
+    clickArea:SetPoint("TOPLEFT",     container, "TOPLEFT",  -4,  4)
+    clickArea:SetPoint("BOTTOMRIGHT", container, "TOPRIGHT", -28, -16)
+    clickArea:SetFrameLevel(container:GetFrameLevel() + 5)
     clickArea:RegisterForClicks("LeftButtonUp")
     section.clickArea = clickArea
 
-    local line = parent:CreateTexture(nil, "ARTWORK")
-    line:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -3)
-    line:SetSize(width - 4, 1)
+    local line = container:CreateTexture(nil, "ARTWORK")
+    line:SetPoint("TOPLEFT",  header,    "BOTTOMLEFT", 0, -3)
+    line:SetPoint("TOPRIGHT", container, "TOPRIGHT",  -28, -19)
+    line:SetHeight(1)
     line:SetColorTexture(1, 0.82, 0, 0.35)
     section.line = line
+
+    function section:UpdateNaturalHeight()
+        if self._collapsed then
+            self.container:SetHeight(COLLAPSED_HEIGHT)
+            return
+        end
+        local cTop = self.container:GetTop()
+        if not cTop then
+            C_Timer.After(0, function() self:UpdateNaturalHeight() end)
+            return
+        end
+        local lowest, anyPos = cTop, false
+        for _, w in ipairs(self.children) do
+            if w.IsShown and w:IsShown() and w.GetBottom then
+                local b = w:GetBottom()
+                if b then
+                    anyPos = true
+                    if b < lowest then lowest = b end
+                end
+            end
+        end
+        if not anyPos and #self.children > 0 then
+            C_Timer.After(0, function() self:UpdateNaturalHeight() end)
+            return
+        end
+        local span = math.max(COLLAPSED_HEIGHT, cTop - lowest + 8)
+        self.container:SetHeight(span)
+    end
 
     function section:SetCollapsed(state, persist)
         state = state and true or false
@@ -245,6 +328,11 @@ local function makeSection(parent, title, x, y, key, width)
             SplitWatchDB.collapsedSections[self.key] = state or nil
         end
         self._collapsed = state
+        if state then
+            self.container:SetHeight(COLLAPSED_HEIGHT)
+        else
+            self:UpdateNaturalHeight()
+        end
     end
 
     function section:Toggle()
@@ -272,6 +360,9 @@ local function makeSection(parent, title, x, y, key, width)
     section:SetCollapsed(restored or false, false)
 
     _currentSection = section
+    -- Defer natural-height resolution to the next frame so widgets registered
+    -- after this point have actually positioned themselves.
+    C_Timer.After(0, function() section:UpdateNaturalHeight() end)
     return section
 end
 
@@ -296,7 +387,10 @@ end
 -- ============================================================
 
 local function buildSetupPage(parent)
-    makeSection(parent, L["General"], 14, -8, "setup.general", 420)
+    -- Sections chain vertically; widget Y coords stay the same since
+    -- _captureAndReparent translates page-Y to container-local-Y using each
+    -- section's original Y as the origin.
+    makeSection(parent, L["General"], 14, -8, "setup.general")
     local mm = makeCheck(parent, L["Show minimap icon"], "minimapHidden",
         14, -40, L["Toggle the minimap launcher button"])
     -- minimapHidden is inverted: checkbox checked = icon visible.
@@ -314,7 +408,7 @@ local function buildSetupPage(parent)
         14, -124, L["Recompute weights from the DPS source every time combat ends"]),
         "autoRefresh")
 
-    makeSection(parent, L["DPS source"], 14, -160, "setup.dps_source", 420)
+    makeSection(parent, L["DPS source"], 14, -160, "setup.dps_source")
     local sources = {
         { text = "Details!",                       value = "DETAILS" },
         { text = "Recount",                        value = "RECOUNT" },
@@ -334,9 +428,7 @@ local function buildSetupPage(parent)
     -- Defensive: re-register isn't needed.
 
     -- ---- Source preview (live read of DPS+HPS for the current roster) ----
-    -- Spans full width below the Permission status section (which sits on the
-    -- right at y=-250). Pushed down to y=-340 so the two don't overlap.
-    local sourcePrevSection = makeSection(parent, L["Source preview"], 14, -340, "setup.source_preview", 640)
+    local sourcePrevSection = makeSection(parent, L["Source preview"], 14, -340, "setup.source_preview")
     local hintFS = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     hintFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -364)
     hintFS:SetWidth(640); hintFS:SetJustifyH("LEFT")
@@ -436,10 +528,10 @@ local function buildSetupPage(parent)
         if ticker then ticker:Cancel(); ticker = nil end
     end)
 
-    makeSection(parent, L["Permission status"], 360, -250, "setup.permissions", 300)
+    makeSection(parent, L["Permission status"], 14, -510, "setup.permissions")
     local permFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    permFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -278)
-    permFS:SetWidth(300); permFS:SetJustifyH("LEFT")
+    permFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -538)
+    permFS:SetWidth(640); permFS:SetJustifyH("LEFT")
     _registerInSection(permFS)
     permFS.refresh = function()
         local ok, err = SplitW.Apply:CanApply()
@@ -788,11 +880,11 @@ local function buildAboutPage(parent)
         " |cff888888(" .. L["alias"] .. ": /splitwatch)|r\n" ..
         "|cffaaaaaa" .. L["Sister addons"] .. ":|r BossWatch, TankWatch")
 
-    -- ---- LEFT COLUMN: Slash commands (below the logo/info block) ----
-    makeSection(parent, L["Slash commands"], 14, -160, "about.slash", 420)
+    -- ---- Slash commands (chained, full width) ----
+    makeSection(parent, L["Slash commands"], 14, -160, "about.slash")
     local cmds = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     cmds:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -190)
-    cmds:SetWidth(420); cmds:SetJustifyH("LEFT"); cmds:SetSpacing(4)
+    cmds:SetWidth(640); cmds:SetJustifyH("LEFT"); cmds:SetSpacing(4)
     cmds:SetText(
         "|cffffff00/splitw|r — "         .. L["open options"] .. "\n" ..
         "|cffffff00/splitw preview|r — " .. L["compute and show split preview"] .. "\n" ..
@@ -801,11 +893,11 @@ local function buildAboutPage(parent)
         "|cffffff00/splitw reset|r — "   .. L["reset all settings + reload"])
     _registerInSection(cmds)
 
-    -- ---- RIGHT COLUMN: Panel preferences (opacity + reset window) ----
-    makeSection(parent, L["Panel"], 450, -160, "about.panel", 220)
+    -- ---- Panel preferences (opacity + reset window) ----
+    makeSection(parent, L["Panel"], 14, -300, "about.panel")
     local alphaSlider = CreateFrame("Frame", nil, parent, "MinimalSliderWithSteppersTemplate")
     alphaSlider:SetWidth(220)
-    alphaSlider:SetPoint("TOPLEFT", parent, "TOPLEFT", 450, -200)
+    alphaSlider:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -334)
     _registerInSection(alphaSlider)
     local function fmtPct(v2) return math.floor(v2 * 100 + 0.5) .. "%" end
     local alphaFormatters = {
@@ -824,7 +916,7 @@ local function buildAboutPage(parent)
 
     local btnResetWin = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     btnResetWin:SetSize(220, 22)
-    btnResetWin:SetPoint("TOPLEFT", parent, "TOPLEFT", 450, -250)
+    btnResetWin:SetPoint("TOPLEFT", parent, "TOPLEFT", 260, -334)
     btnResetWin:SetText(L["Reset window position"])
     btnResetWin:SetScript("OnClick", function()
         SplitW:GetDB().panelPoint = nil
@@ -836,8 +928,8 @@ local function buildAboutPage(parent)
     addTooltip(btnResetWin, L["Reset the options window to its default center position."])
     _registerInSection(btnResetWin)
 
-    -- ---- FULL-WIDTH: Changelog ----
-    makeSection(parent, L["Changelog"], 14, -300, "about.changelog", 640)
+    -- ---- Changelog (chained at the bottom) ----
+    makeSection(parent, L["Changelog"], 14, -400, "about.changelog")
     local entries = {
         { ver = "0.1.0", date = "2026-05-11", lines = {
             L["• Initial release: manual weight mode, snake-distribution algorithm, preview pane with before/after stats, permission-gated Apply via SetRaidSubgroup."],
@@ -849,7 +941,7 @@ local function buildAboutPage(parent)
             L["• Collapsible sections with per-section reset, persisted across reloads."],
         }},
     }
-    local y = -330
+    local y = -430
     for _, e in ipairs(entries) do
         local h = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         h:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, y)
