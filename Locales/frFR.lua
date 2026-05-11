@@ -85,9 +85,24 @@ L["applying split — %d moves queued"] = "Application du split — %d déplacem
 
 -- About / Changelog
 L["About SplitWatch"] = "À propos de SplitWatch"
-L["SplitWatch v%s — auto-split a 20-man raid into 2 balanced teams.\nAuthor: Timikana\nSlash command: |cffffff00/splitw|r\nSister addons: BossWatch + TankWatch.\n"] =
-    "SplitWatch v%s — sépare automatiquement un raid 20 en 2 équipes équilibrées.\nAuteur : Timikana\nCommande : |cffffff00/splitw|r\nAddons jumeaux : BossWatch + TankWatch.\n"
+L["Auto-split a 10-30 man raid into 2 balanced teams (tanks, healers by HPS, DPS by damage) for split-mechanic encounters."] =
+    "Sépare automatiquement un raid de 10 à 30 en 2 équipes équilibrées (tanks, heals selon HPS, DPS selon dégâts) pour les fights à mécaniques split."
+L["Author"] = "Auteur"
+L["Slash command"] = "Commande"
+L["alias"] = "alias"
+L["Sister addons"] = "Addons jumeaux"
+L["Slash commands"] = "Commandes /slash"
+L["Reset window position"] = "Réinitialiser la position de la fenêtre"
+L["Reset the options window to its default center position."] = "Remet la fenêtre d'options au centre de l'écran."
 L["Changelog"] = "Historique"
+L["• Damage meter sources: Details!, Recount, Skada, Manual."] =
+    "• Sources de damage meter : Details!, Recount, Skada, Manuel."
+L["• Healers balanced by HPS (live read from the active source), DPS by damage."] =
+    "• Heals équilibrés selon le HPS (lecture live depuis la source active), DPS selon les dégâts."
+L["• Supports raids from 10 to 30 members — subgroups assigned dynamically."] =
+    "• Compatible raids de 10 à 30 — les sous-groupes sont assignés dynamiquement."
+L["• Collapsible sections with per-section reset, persisted across reloads."] =
+    "• Sections repliables avec reset par section, persisté entre les /reload."
 L["• Initial release: manual weight mode, snake-distribution algorithm, preview pane with before/after stats, permission-gated Apply via SetRaidSubgroup."] =
     "• Version initiale : mode poids manuel, algorithme de distribution en serpent, aperçu avec stats avant/après, application protégée via SetRaidSubgroup."
 L["• Supports retail 12.x and MoP Classic 5.5."] = "• Compatible retail 12.x et MoP Classic 5.5."

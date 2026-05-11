@@ -758,21 +758,54 @@ StaticPopupDialogs["SPLITWATCH_CONFIRM_APPLY"] = {
 -- ABOUT + CHANGELOG PAGE
 -- ----------------------------------------------------------------
 local function buildAboutPage(parent)
-    makeSection(parent, L["About SplitWatch"], 14, -8, "about.info", 420)
-    local v = C_AddOns and C_AddOns.GetAddOnMetadata(addonName, "Version") or "?"
-    local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    fs:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -40)
-    fs:SetWidth(420); fs:SetJustifyH("LEFT")
-    fs:SetText(format(
-        L["SplitWatch v%s — auto-split a 20-man raid into 2 balanced teams.\nAuthor: Timikana\nSlash command: |cffffff00/splitw|r\nSister addons: BossWatch + TankWatch.\n"],
-        v))
-    _registerInSection(fs)
+    local version = C_AddOns and C_AddOns.GetAddOnMetadata(addonName, "Version") or "?"
+    local author  = C_AddOns and C_AddOns.GetAddOnMetadata(addonName, "Author")  or "Timikana"
 
-    -- Panel opacity slider (account-wide preference)
-    makeSection(parent, L["Panel"], 450, -8, "about.panel", 200)
+    -- ---- HEADER ROW: logo (left) + title/version/author/sisters (right) ----
+    -- Drop the section header for this top block — the logo IS the visual anchor.
+    _currentSection = nil
+
+    local logo = parent:CreateTexture(nil, "ARTWORK")
+    logo:SetSize(120, 120)
+    logo:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -14)
+    logo:SetTexture("Interface\\AddOns\\SplitWatch\\Media\\logo.tga")
+
+    local title = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+    title:SetPoint("TOPLEFT", logo, "TOPRIGHT", 16, -4)
+    title:SetText("|cffffd100SplitWatch|r  |cffaaaaaav" .. version .. "|r")
+
+    local sub = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -10)
+    sub:SetWidth(480); sub:SetJustifyH("LEFT")
+    sub:SetText(L["Auto-split a 10-30 man raid into 2 balanced teams (tanks, healers by HPS, DPS by damage) for split-mechanic encounters."])
+
+    local meta = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    meta:SetPoint("TOPLEFT", sub, "BOTTOMLEFT", 0, -10)
+    meta:SetWidth(480); meta:SetJustifyH("LEFT"); meta:SetSpacing(3)
+    meta:SetText(
+        "|cffaaaaaa" .. L["Author"]        .. ":|r |cffffffff" .. author .. "|r\n" ..
+        "|cffaaaaaa" .. L["Slash command"] .. ":|r |cffffff00/splitw|r" ..
+        " |cff888888(" .. L["alias"] .. ": /splitwatch)|r\n" ..
+        "|cffaaaaaa" .. L["Sister addons"] .. ":|r BossWatch, TankWatch")
+
+    -- ---- LEFT COLUMN: Slash commands (below the logo/info block) ----
+    makeSection(parent, L["Slash commands"], 14, -160, "about.slash", 420)
+    local cmds = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    cmds:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -190)
+    cmds:SetWidth(420); cmds:SetJustifyH("LEFT"); cmds:SetSpacing(4)
+    cmds:SetText(
+        "|cffffff00/splitw|r — "         .. L["open options"] .. "\n" ..
+        "|cffffff00/splitw preview|r — " .. L["compute and show split preview"] .. "\n" ..
+        "|cffffff00/splitw apply|r — "   .. L["apply the current split via SetRaidSubgroup"] .. "\n" ..
+        "|cffffff00/splitw test|r — "    .. L["toggle simulated 20-man roster"] .. "\n" ..
+        "|cffffff00/splitw reset|r — "   .. L["reset all settings + reload"])
+    _registerInSection(cmds)
+
+    -- ---- RIGHT COLUMN: Panel preferences (opacity + reset window) ----
+    makeSection(parent, L["Panel"], 450, -160, "about.panel", 220)
     local alphaSlider = CreateFrame("Frame", nil, parent, "MinimalSliderWithSteppersTemplate")
     alphaSlider:SetWidth(220)
-    alphaSlider:SetPoint("TOPLEFT", parent, "TOPLEFT", 450, -50)
+    alphaSlider:SetPoint("TOPLEFT", parent, "TOPLEFT", 450, -200)
     _registerInSection(alphaSlider)
     local function fmtPct(v2) return math.floor(v2 * 100 + 0.5) .. "%" end
     local alphaFormatters = {
@@ -789,28 +822,47 @@ local function buildAboutPage(parent)
     end, alphaSlider)
     addTooltip(alphaSlider, L["Opacity of this options window. Saved account-wide."])
 
-    makeSection(parent, L["Changelog"], 14, -160, "about.changelog", 640)
+    local btnResetWin = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    btnResetWin:SetSize(220, 22)
+    btnResetWin:SetPoint("TOPLEFT", parent, "TOPLEFT", 450, -250)
+    btnResetWin:SetText(L["Reset window position"])
+    btnResetWin:SetScript("OnClick", function()
+        SplitW:GetDB().panelPoint = nil
+        if panel then
+            panel:ClearAllPoints()
+            panel:SetPoint("CENTER")
+        end
+    end)
+    addTooltip(btnResetWin, L["Reset the options window to its default center position."])
+    _registerInSection(btnResetWin)
+
+    -- ---- FULL-WIDTH: Changelog ----
+    makeSection(parent, L["Changelog"], 14, -300, "about.changelog", 640)
     local entries = {
         { ver = "0.1.0", date = "2026-05-11", lines = {
             L["• Initial release: manual weight mode, snake-distribution algorithm, preview pane with before/after stats, permission-gated Apply via SetRaidSubgroup."],
             L["• Supports retail 12.x and MoP Classic 5.5."],
             L["• Test mode (/splitw test) for UI preview without a raid."],
+            L["• Damage meter sources: Details!, Recount, Skada, Manual."],
+            L["• Healers balanced by HPS (live read from the active source), DPS by damage."],
+            L["• Supports raids from 10 to 30 members — subgroups assigned dynamically."],
+            L["• Collapsible sections with per-section reset, persisted across reloads."],
         }},
     }
-    local y = -195
+    local y = -330
     for _, e in ipairs(entries) do
         local h = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         h:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, y)
         h:SetText(string.format("|cffffd100v%s|r |cffaaaaaa(%s)|r", e.ver, e.date))
         _registerInSection(h)
-        y = y - 18
+        y = y - 20
         for _, line in ipairs(e.lines) do
             local l = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
             l:SetPoint("TOPLEFT", parent, "TOPLEFT", 24, y)
-            _registerInSection(l)
             l:SetWidth(620); l:SetJustifyH("LEFT")
             l:SetText(line)
-            y = y - (math.ceil(l:GetStringHeight()) + 6)
+            _registerInSection(l)
+            y = y - (math.ceil(l:GetStringHeight()) + 4)
         end
         y = y - 6
     end
