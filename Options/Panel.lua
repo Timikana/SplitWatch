@@ -223,6 +223,26 @@ local function buildSetupPage(parent)
     end
     permFS:refresh()
 
+    -- Panel opacity slider (account-wide, like BossWatch)
+    makeHeader(parent, L["Panel"], 360, -8)
+    local alphaSlider = CreateFrame("Frame", nil, parent, "MinimalSliderWithSteppersTemplate")
+    alphaSlider:SetWidth(220)
+    alphaSlider:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -50)
+    local function fmtPct(v) return math.floor(v * 100 + 0.5) .. "%" end
+    local alphaFormatters = {
+        [MinimalSliderWithSteppersMixin.Label.Min] = function() return "20%" end,
+        [MinimalSliderWithSteppersMixin.Label.Max] = function() return "100%" end,
+        [MinimalSliderWithSteppersMixin.Label.Top] = function(v) return L["Panel opacity"] .. ": " .. fmtPct(v) end,
+    }
+    SplitWatchDB.panelAlpha = SplitWatchDB.panelAlpha or 0.85
+    alphaSlider:Init(SplitWatchDB.panelAlpha, 0.2, 1.0, 16, alphaFormatters)
+    alphaSlider:RegisterCallback(MinimalSliderWithSteppersMixin.Event.OnValueChanged, function(_, v)
+        v = math.floor(v * 100 + 0.5) / 100
+        SplitWatchDB.panelAlpha = v
+        if panel then panel:SetAlpha(v) end
+    end, alphaSlider)
+    addTooltip(alphaSlider, L["Opacity of this options window. Saved account-wide."])
+
     -- Classic banner
     if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE and WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE then
         local banner = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -563,22 +583,33 @@ local function build()
     panel:SetFrameStrata("HIGH")
     panel:Hide()
 
-    -- Title + portrait
+    -- Account-wide opacity (mirrors BossWatch's 0.85 default).
+    SplitWatchDB = SplitWatchDB or {}
+    if SplitWatchDB.panelAlpha == nil then SplitWatchDB.panelAlpha = 0.85 end
+    panel:SetAlpha(SplitWatchDB.panelAlpha)
+
+    -- Title
     if panel.TitleContainer and panel.TitleContainer.TitleText then
         panel.TitleContainer.TitleText:SetText("SplitWatch")
     elseif panel.TitleText then
         panel.TitleText:SetText("SplitWatch")
     end
+
+    -- Portrait — PortraitFrameTemplate exposes either `panel.portrait` (legacy)
+    -- or `panel.PortraitContainer.portrait` (modern). Set both, harmlessly.
+    local PORTRAIT_TEX = "Interface\\AddOns\\SplitWatch\\Media\\logo.tga"
+    if panel.portrait then panel.portrait:SetTexture(PORTRAIT_TEX) end
     if panel.PortraitContainer and panel.PortraitContainer.portrait then
-        panel.PortraitContainer.portrait:SetTexture("Interface\\AddOns\\SplitWatch\\Media\\logo")
-    elseif panel.portrait then
-        panel.portrait:SetTexture("Interface\\AddOns\\SplitWatch\\Media\\logo")
+        panel.PortraitContainer.portrait:SetTexture(PORTRAIT_TEX)
+    end
+    if panel.SetPortraitToAsset then
+        pcall(panel.SetPortraitToAsset, panel, PORTRAIT_TEX)
     end
 
-    -- Page holder
+    -- Page holder (matches BossWatch bounds)
     pageHolder = CreateFrame("Frame", nil, panel)
-    pageHolder:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -64)
-    pageHolder:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -12, 40)
+    pageHolder:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -60)
+    pageHolder:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -8, 8)
 
     local function makePage(name, builder)
         local p = CreateFrame("Frame", nil, pageHolder)
@@ -618,19 +649,35 @@ local function build()
     end
 
     for i, def in ipairs(tabDefs) do
-        local t = CreateFrame("Button", "SplitWatchTab"..i, panel, "PanelTopTabButtonTemplate")
+        local t = CreateFrame("Button", "SplitWatchTab"..i, panel, "PanelTabButtonTemplate")
         t.id = def.id
         t:SetID(i)
         t:SetText(def.label)
         PanelTemplates_TabResize(t, 0)
-        if i == 1 then
-            t:SetPoint("TOPLEFT", panel, "BOTTOMLEFT", 16, 2)
-        else
-            t:SetPoint("LEFT", tabFrames[i-1], "RIGHT", -16, 0)
-        end
-        t:SetScript("OnClick", function() selectTab(def.id) end)
-        addTooltip(t, def.label)
         tabFrames[i] = t
+    end
+    local function layoutTabs()
+        local available = panel:GetWidth() - 24
+        local x, y = 12, 2
+        local rowH = 24
+        local row = 0
+        local baseLevel = panel:GetFrameLevel()
+        for _, tab in ipairs(tabFrames) do
+            local w = tab:GetWidth()
+            if x > 12 and (x + w) > available + 12 then
+                x = 12; y = y - rowH; row = row + 1
+            end
+            tab:ClearAllPoints()
+            tab:SetPoint("TOPLEFT", panel, "BOTTOMLEFT", x, y)
+            tab:SetFrameLevel(baseLevel + 2 + row * 2)
+            x = x + w + 2
+        end
+    end
+    layoutTabs()
+    panel:HookScript("OnSizeChanged", layoutTabs)
+    for _, t in ipairs(tabFrames) do
+        t:SetScript("OnClick", function() selectTab(t.id) end)
+        addTooltip(t, t:GetText() or "")
     end
 
     -- Refresh all pages
@@ -648,9 +695,9 @@ local function build()
     -- ============================================================
     local SIDE_TAB_SIZE = 48
     local sideTabs = {
-        { id = "SplitWatch", isSelf = true, icon = "Interface\\AddOns\\SplitWatch\\Media\\logo",
+        { id = "SplitWatch", isSelf = true, icon = "Interface\\AddOns\\SplitWatch\\Media\\logo.tga",
           tooltip = L["SplitWatch — Options"], onClick = function() end },
-        { id = "BossWatch", isSelf = false, icon = "Interface\\AddOns\\BossWatch\\Media\\logo",
+        { id = "BossWatch", isSelf = false, icon = "Interface\\AddOns\\BossWatch\\Media\\logo.tga",
           tooltip = L["Open BossWatch options"],
           loadedCheck = function()
               local BW = _G.BossWatch

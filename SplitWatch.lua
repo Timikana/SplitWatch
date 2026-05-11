@@ -220,7 +220,7 @@ function SplitW:RegisterMinimapIcon()
     local broker = LDB:NewDataObject("SplitWatch", {
         type = "launcher",
         text = "SplitWatch",
-        icon = "Interface\\AddOns\\SplitWatch\\Media\\logo",
+        icon = "Interface\\AddOns\\SplitWatch\\Media\\logo.tga",
         OnClick = function(_, button)
             if button == "RightButton" then
                 if SplitW.Apply then SplitW.Apply:Run() end

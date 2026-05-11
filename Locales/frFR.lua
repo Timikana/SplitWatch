@@ -123,3 +123,6 @@ L["test mode off"] = "mode test désactivé"
 L["|cffffd100SplitWatch|r v%s loaded — type |cffffff00/splitw|r for options"] =
     "|cffffd100SplitWatch|r v%s chargé — tape |cffffff00/splitw|r pour les options"
 L["WARN_CLASSIC"] = "⚠ Version Classic — UI pas encore testée à fond en raid, merci de signaler les bugs."
+L["Panel"] = "Panneau"
+L["Panel opacity"] = "Opacité du panneau"
+L["Opacity of this options window. Saved account-wide."] = "Opacité de cette fenêtre. Sauvegardée pour tout le compte."
