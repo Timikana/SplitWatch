@@ -195,13 +195,15 @@ local function buildSetupPage(parent)
 
     makeHeader(parent, L["DPS source"], 14, -160)
     local sources = {
-        { text = L["Manual (per-player slider)"], value = "MANUAL" },
-        { text = "Details!", value = "DETAILS" },
-        { text = "Recount", value = "RECOUNT" },
+        { text = L["Built-in (combat log)"],      value = "BUILTIN" },
+        { text = "Details!",                       value = "DETAILS" },
+        { text = "Recount",                        value = "RECOUNT" },
+        { text = "Skada",                          value = "SKADA"   },
+        { text = L["Manual (per-player slider)"], value = "MANUAL"  },
     }
-    makeDropdown(parent, L["Pick the data source for DPS weights"], "dpsSource",
+    makeDropdown(parent, L["Pick the data source for DPS / HPS"], "dpsSource",
         sources, 14, -195, 220,
-        L["Manual = the weights you set on the Weights tab. Details! or Recount = read recent damage from those addons."])
+        L["Built-in parses the WoW combat log natively (no addon needed). Details!/Recount/Skada read from those addons when loaded. Manual uses the Weights tab sliders."])
 
     local statusFS = makeLabel(parent, "", 260, -211)
     statusFS.refresh = function()
@@ -429,8 +431,8 @@ local function buildPreviewPage(parent)
         listFS:SetWidth(300); listFS:SetJustifyH("LEFT")
         return titleFS, listFS
     end
-    local titleA, listA = makeTeamColumn(L["Team A (groups 1-2)"], 14)
-    local titleB, listB = makeTeamColumn(L["Team B (groups 3-4)"], 360)
+    local titleA, listA = makeTeamColumn(L["Team A"], 14)
+    local titleB, listB = makeTeamColumn(L["Team B"], 360)
 
     -- Warnings line
     local warnFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -438,11 +440,11 @@ local function buildPreviewPage(parent)
     warnFS:SetWidth(640); warnFS:SetJustifyH("LEFT")
 
     local WARN_TEXT = {
-        ONE_TANK    = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tOnly one tank — both teams share the same tank? Check your roster."],
-        NO_TANK     = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tNo tank detected in the raid."],
-        TEAM_A_OVER = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam A has more than 10 players — cannot fit in two subgroups."],
-        TEAM_B_OVER = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam B has more than 10 players — cannot fit in two subgroups."],
-        UNEVEN_25   = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tRaid > 20 members — split will be uneven (algorithm tuned for 20-man)."],
+        ONE_TANK     = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tOnly one tank — both teams share the same tank? Check your roster."],
+        NO_TANK      = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tNo tank detected in the raid."],
+        TEAM_A_OVER  = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam A is too large for any reasonable raid size."],
+        TEAM_B_OVER  = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam B is too large for any reasonable raid size."],
+        UNEVEN_TEAMS = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeams differ by more than 1 player — score is balanced by giving the weakest DPS to the larger team."],
     }
 
     local function fmtTeam(team, sum)
@@ -506,10 +508,12 @@ local function buildPreviewPage(parent)
         end
 
         afterStatsFS:SetText(string.format(
-            "|cffffd100%s|r\n  A: %d (%dT %dH %dDPS — score %d)\n  B: %d (%dT %dH %dDPS — score %d)",
+            "|cffffd100%s|r\n  A: %d (%dT %dH %dDPS)\n      DPS: %d  HPS: %d\n  B: %d (%dT %dH %dDPS)\n      DPS: %d  HPS: %d",
             L["Proposed split"],
-            #split.teamA, split.tanksA, split.healsA, split.dpsA, math.floor(split.scoreA + 0.5),
-            #split.teamB, split.tanksB, split.healsB, split.dpsB, math.floor(split.scoreB + 0.5)))
+            #split.teamA, split.tanksA, split.healsA, split.dpsA,
+            math.floor(split.scoreA + 0.5), math.floor((split.healScoreA or 0) + 0.5),
+            #split.teamB, split.tanksB, split.healsB, split.dpsB,
+            math.floor(split.scoreB + 0.5), math.floor((split.healScoreB or 0) + 0.5)))
 
         listA:SetText(fmtTeam(split.teamA, split.scoreA))
         listB:SetText(fmtTeam(split.teamB, split.scoreB))

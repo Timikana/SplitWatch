@@ -21,9 +21,10 @@ L["Recompute weights from the DPS source every time combat ends"] = "Recalcule l
 
 L["DPS source"] = "Source DPS"
 L["Manual (per-player slider)"] = "Manuel (slider par joueur)"
-L["Pick the data source for DPS weights"] = "Choisir la source des poids DPS"
-L["Manual = the weights you set on the Weights tab. Details! or Recount = read recent damage from those addons."] =
-    "Manuel = les poids que tu règles dans l'onglet Poids. Details! ou Recount = lit les dégâts récents depuis ces addons."
+L["Built-in (combat log)"] = "Intégré (combat log)"
+L["Pick the data source for DPS / HPS"] = "Choisir la source des poids DPS / HPS"
+L["Built-in parses the WoW combat log natively (no addon needed). Details!/Recount/Skada read from those addons when loaded. Manual uses the Weights tab sliders."] =
+    "Intégré : parse le combat log WoW nativement (aucun addon requis). Details!/Recount/Skada : lit depuis ces addons quand ils sont chargés. Manuel : utilise les sliders de l'onglet Poids."
 L["Active source"] = "Source active"
 
 L["Permission status"] = "Statut des permissions"
@@ -57,20 +58,20 @@ L["Before"] = "Avant"
 L["After"]  = "Après"
 L["Current raid distribution"] = "Distribution actuelle du raid"
 L["Proposed split"] = "Split proposé"
-L["Team A (groups 1-2)"] = "Équipe A (groupes 1-2)"
-L["Team B (groups 3-4)"] = "Équipe B (groupes 3-4)"
+L["Team A"] = "Équipe A"
+L["Team B"] = "Équipe B"
 L["No split computed yet — click 'Compute split'."] = "Aucun split calculé — clique sur 'Calculer le split'."
 L["(empty)"] = "(vide)"
 L["Looks good — no warnings."] = "Tout est bon — aucun avertissement."
 L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tOnly one tank — both teams share the same tank? Check your roster."] =
     "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tUn seul tank — les deux équipes partagent le même tank ? Vérifie ton roster."
 L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tNo tank detected in the raid."] = "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tAucun tank détecté dans le raid."
-L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam A has more than 10 players — cannot fit in two subgroups."] =
-    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tL'équipe A dépasse 10 joueurs — impossible de tenir dans deux sous-groupes."
-L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam B has more than 10 players — cannot fit in two subgroups."] =
-    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tL'équipe B dépasse 10 joueurs — impossible de tenir dans deux sous-groupes."
-L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tRaid > 20 members — split will be uneven (algorithm tuned for 20-man)."] =
-    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tRaid > 20 membres — le split sera déséquilibré (algorithme calibré pour 20)."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam A is too large for any reasonable raid size."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tÉquipe A trop grande pour une taille de raid raisonnable."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam B is too large for any reasonable raid size."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tÉquipe B trop grande pour une taille de raid raisonnable."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeams differ by more than 1 player — score is balanced by giving the weakest DPS to the larger team."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tLes équipes diffèrent de plus de 1 joueur — le score est équilibré en mettant le DPS le plus faible dans l'équipe la plus grande."
 L["Apply the proposed split? This will move raid members."] =
     "Appliquer le split proposé ? Cela va déplacer les membres du raid."
 

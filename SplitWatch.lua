@@ -14,7 +14,7 @@ SplitW.Defaults = {
     weightMin     = 1,
     weightMax     = 100,
     weightDefault = 50,
-    dpsSource     = "MANUAL", -- MANUAL | DETAILS | RECOUNT
+    dpsSource     = "BUILTIN", -- BUILTIN | DETAILS | RECOUNT | SKADA | MANUAL — Built-in parses the combat log natively, zero addon dependency.
     autoRefresh   = false,    -- auto-rescan after each combat ends
 
     -- Per-player manual weights: { ["Name"] = 50, ... }
@@ -162,6 +162,18 @@ function SplitW:GetEffectiveWeight(entry)
     local db = SplitW:GetDB()
     if db.dpsSource ~= "MANUAL" and SplitW.DPSSource and SplitW.DPSSource.GetDPS then
         local v = SplitW.DPSSource:GetDPS(entry.name)
+        if v and v > 0 then return v end
+    end
+    return self:GetWeight(entry.name) or db.weightDefault or 50
+end
+
+-- Effective HPS for healer balancing. Returns the live HPS from the active
+-- damage-meter source, or falls back to the manual per-player weight (which
+-- doubles as a generic strength score in the absence of healing data).
+function SplitW:GetEffectiveHPS(entry)
+    local db = SplitW:GetDB()
+    if db.dpsSource ~= "MANUAL" and SplitW.DPSSource and SplitW.DPSSource.GetHPS then
+        local v = SplitW.DPSSource:GetHPS(entry.name)
         if v and v > 0 then return v end
     end
     return self:GetWeight(entry.name) or db.weightDefault or 50
