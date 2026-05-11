@@ -209,24 +209,24 @@ local function makeSection(parent, title, x, y, key, width)
     chevron:SetTexture(TEX_EXPANDED)
     section.chevron = chevron
 
-    -- Click area: header text + chevron (collapse/expand)
-    local clickArea = CreateFrame("Button", nil, parent)
-    clickArea:SetPoint("TOPLEFT", parent, "TOPLEFT", x - 4, y + 4)
-    clickArea:SetSize((header:GetStringWidth() or 100) + 30, 20)
-    -- Re-fit click area after Blizzard finishes measuring the FontString
-    C_Timer.After(0, function()
-        clickArea:SetSize((header:GetStringWidth() or 100) + 30, 20)
-    end)
-    clickArea:RegisterForClicks("LeftButtonUp")
-    section.clickArea = clickArea
-
-    -- Reset button at the right edge (per-section reset of dbKeys to Defaults)
+    -- Reset button at the right edge (built first so click area can stop before it)
     local btnReset = CreateFrame("Button", nil, parent)
     btnReset:SetSize(14, 14)
     btnReset:SetPoint("TOPLEFT", parent, "TOPLEFT", x + width - 18, y - 2)
     btnReset:SetNormalTexture("Interface\\Buttons\\UI-RefreshButton")
     btnReset:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+    btnReset:SetFrameLevel(parent:GetFrameLevel() + 6)
     section.resetBtn = btnReset
+
+    -- Click area: cover the whole header-line strip except where the reset button
+    -- sits. Use two SetPoints so the area stretches with the requested width and
+    -- doesn't depend on the FontString's measured size (which is 0 at build time).
+    local clickArea = CreateFrame("Button", nil, parent)
+    clickArea:SetPoint("TOPLEFT",     parent, "TOPLEFT", x - 4,            y + 4)
+    clickArea:SetPoint("BOTTOMRIGHT", parent, "TOPLEFT", x + width - 22,   y - 14)
+    clickArea:SetFrameLevel(parent:GetFrameLevel() + 5)
+    clickArea:RegisterForClicks("LeftButtonUp")
+    section.clickArea = clickArea
 
     local line = parent:CreateTexture(nil, "ARTWORK")
     line:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -3)
@@ -331,13 +331,16 @@ local function buildSetupPage(parent)
         statusFS:SetText("|cffaaaaaa" .. L["Active source"] .. ":|r " .. SplitW.DPSSource:ActiveSourceLabel())
     end
     statusFS:refresh()
+    -- makeLabel already registered statusFS — but only since the recent factory change.
+    -- Defensive: re-register isn't needed.
 
     -- ---- Source preview (live read of DPS+HPS for the current roster) ----
-    makeSection(parent, L["Source preview"], 14, -250, "setup.source_preview", 640)
+    local sourcePrevSection = makeSection(parent, L["Source preview"], 14, -250, "setup.source_preview", 640)
     local hintFS = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     hintFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -274)
     hintFS:SetWidth(640); hintFS:SetJustifyH("LEFT")
     hintFS:SetText(L["Live values read from the selected source for the current (or test) roster."])
+    _registerInSection(hintFS)
 
     local previewScroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
     previewScroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -292)
@@ -345,6 +348,7 @@ local function buildSetupPage(parent)
     local previewContent = CreateFrame("Frame", nil, previewScroll)
     previewContent:SetSize(620, 1)
     previewScroll:SetScrollChild(previewContent)
+    _registerInSection(previewScroll)
     local previewRows = {}
 
     local function fmtNum(v)
@@ -422,6 +426,7 @@ local function buildSetupPage(parent)
     local permFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     permFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -278)
     permFS:SetWidth(300); permFS:SetJustifyH("LEFT")
+    _registerInSection(permFS)
     permFS.refresh = function()
         local ok, err = SplitW.Apply:CanApply()
         if ok then
@@ -456,6 +461,7 @@ local function buildWeightsPage(parent)
     hint:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -32)
     hint:SetWidth(640); hint:SetJustifyH("LEFT")
     hint:SetText("|cffaaaaaa" .. L["Adjust each DPS player's relative weight (1-100). Higher = goes into the lower-scoring team first."] .. "|r")
+    _registerInSection(hint)
 
     -- Scroll frame
     local scroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
@@ -464,6 +470,7 @@ local function buildWeightsPage(parent)
     local content = CreateFrame("Frame", nil, scroll)
     content:SetSize(620, 1)
     scroll:SetScrollChild(content)
+    _registerInSection(scroll)
 
     local rows = {}
     local function makeRow(idx)
@@ -592,6 +599,7 @@ local function buildPreviewPage(parent)
     local modeFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     modeFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -68)
     modeFS:SetWidth(640); modeFS:SetJustifyH("LEFT")
+    _registerInSection(modeFS)
 
     -- BEFORE / AFTER label. Use a Blizzard texture inline for the arrow because
     -- the FRIZQT__ font doesn't include U+2192 → and renders it as an empty box.
@@ -604,10 +612,12 @@ local function buildPreviewPage(parent)
     local beforeStatsFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     beforeStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -118)
     beforeStatsFS:SetWidth(300); beforeStatsFS:SetJustifyH("LEFT")
+    _registerInSection(beforeStatsFS)
 
     local afterStatsFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     afterStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -118)
     afterStatsFS:SetWidth(300); afterStatsFS:SetJustifyH("LEFT")
+    _registerInSection(afterStatsFS)
 
     -- Team A / Team B columns (after split)
     local function makeTeamColumn(title, x)
@@ -618,6 +628,8 @@ local function buildPreviewPage(parent)
         local listFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         listFS:SetPoint("TOPLEFT", titleFS, "BOTTOMLEFT", 0, -6)
         listFS:SetWidth(300); listFS:SetJustifyH("LEFT")
+        _registerInSection(titleFS)
+        _registerInSection(listFS)
         return titleFS, listFS
     end
     local titleA, listA = makeTeamColumn(L["Team A"], 14)
@@ -627,6 +639,7 @@ local function buildPreviewPage(parent)
     local warnFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     warnFS:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", 14, 14)
     warnFS:SetWidth(640); warnFS:SetJustifyH("LEFT")
+    _registerInSection(warnFS)
 
     local WARN_TEXT = {
         ONE_TANK     = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tOnly one tank — both teams share the same tank? Check your roster."],
@@ -739,12 +752,14 @@ local function buildAboutPage(parent)
     fs:SetText(format(
         L["SplitWatch v%s — auto-split a 20-man raid into 2 balanced teams.\nAuthor: Timikana\nSlash command: |cffffff00/splitw|r\nSister addons: BossWatch + TankWatch.\n"],
         v))
+    _registerInSection(fs)
 
     -- Panel opacity slider (account-wide preference)
     makeSection(parent, L["Panel"], 450, -8, "about.panel", 200)
     local alphaSlider = CreateFrame("Frame", nil, parent, "MinimalSliderWithSteppersTemplate")
     alphaSlider:SetWidth(220)
     alphaSlider:SetPoint("TOPLEFT", parent, "TOPLEFT", 450, -50)
+    _registerInSection(alphaSlider)
     local function fmtPct(v2) return math.floor(v2 * 100 + 0.5) .. "%" end
     local alphaFormatters = {
         [MinimalSliderWithSteppersMixin.Label.Min] = function() return "20%" end,
@@ -773,10 +788,12 @@ local function buildAboutPage(parent)
         local h = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         h:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, y)
         h:SetText(string.format("|cffffd100v%s|r |cffaaaaaa(%s)|r", e.ver, e.date))
+        _registerInSection(h)
         y = y - 18
         for _, line in ipairs(e.lines) do
             local l = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
             l:SetPoint("TOPLEFT", parent, "TOPLEFT", 24, y)
+            _registerInSection(l)
             l:SetWidth(620); l:SetJustifyH("LEFT")
             l:SetText(line)
             y = y - (math.ceil(l:GetStringHeight()) + 6)
