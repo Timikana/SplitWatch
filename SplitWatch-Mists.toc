@@ -1,0 +1,34 @@
+## Interface: 50500
+## Title: SplitWatch
+## Notes: Auto-split a 20-man raid into 2 balanced teams (tanks/healers/DPS) for split-mechanic fights
+## Author: Timikana
+## Version: 0.1.0
+## IconTexture: Interface\Icons\Achievement_PVP_A_A
+## SavedVariables: SplitWatchDB
+
+# Libs
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
+Libs\LibSharedMedia-3.0\LibSharedMedia-3.0.xml
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+
+# Core
+SplitWatch.lua
+
+# Locales
+Locales\enUS.lua
+Locales\frFR.lua
+Locales\deDE.lua
+Locales\esES.lua
+Locales\itIT.lua
+Locales\ptBR.lua
+
+# Modules
+Roster.lua
+Splitter.lua
+Apply.lua
+DPSSource.lua
+
+# Options panel
+Options\Panel.lua

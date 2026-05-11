@@ -1,0 +1,3 @@
+-- enUS is the default: the L metatable returns the key for missing entries,
+-- so this file intentionally registers nothing. Kept for symmetry with the
+-- BossWatch convention so every Locales/*.lua exists and the .toc list is uniform.
