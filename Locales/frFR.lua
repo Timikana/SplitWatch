@@ -88,8 +88,8 @@ L["applying split — %d moves queued"] = "Application du split — %d déplacem
 
 -- About / Changelog
 L["About SplitWatch"] = "À propos de SplitWatch"
-L["Auto-split a 10-30 man raid into 2 balanced teams (tanks, healers by HPS, DPS by damage) for split-mechanic encounters."] =
-    "Sépare automatiquement un raid de 10 à 30 en 2 équipes équilibrées (tanks, heals selon HPS, DPS selon dégâts) pour les fights à mécaniques split."
+L["Auto-split a 10-40 man raid into 2 balanced teams (tanks, healers by HPS, DPS by damage) for split-mechanic encounters."] =
+    "Sépare automatiquement un raid de 10 à 40 en 2 équipes équilibrées (tanks, heals selon HPS, DPS selon dégâts) pour les fights à mécaniques split."
 L["Author"] = "Auteur"
 L["Slash command"] = "Commande"
 L["alias"] = "alias"
@@ -102,8 +102,8 @@ L["• Damage meter sources: Details!, Recount, Skada, Manual."] =
     "• Sources de damage meter : Details!, Recount, Skada, Manuel."
 L["• Healers balanced by HPS (live read from the active source), DPS by damage."] =
     "• Heals équilibrés selon le HPS (lecture live depuis la source active), DPS selon les dégâts."
-L["• Supports raids from 10 to 30 members — subgroups assigned dynamically."] =
-    "• Compatible raids de 10 à 30 — les sous-groupes sont assignés dynamiquement."
+L["• Supports raids from 10 to 40 members — subgroups assigned dynamically."] =
+    "• Compatible raids de 10 à 40 — les sous-groupes sont assignés dynamiquement."
 L["• Collapsible sections with per-section reset, persisted across reloads."] =
     "• Sections repliables avec reset par section, persisté entre les /reload."
 L["• Initial release: manual weight mode, snake-distribution algorithm, preview pane with before/after stats, permission-gated Apply via SetRaidSubgroup."] =

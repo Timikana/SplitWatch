@@ -101,16 +101,17 @@ function Splitter:Compute(roster)
 end
 
 -- ============================================================
--- TEAM → SUBGROUP MAPPING (dynamic, supports 10 to 30-man raids)
--- For team size N, each team uses ceil(N/5) subgroups:
---   10-man  → A=group 1,         B=group 2          (5 max each)
---   11-19   → A=groups 1+2,      B=groups 3+4       (10 max each)
---   20-man  → A=groups 1+2,      B=groups 3+4       (10 each, full)
---   21-30   → A=groups 1+2+3,    B=groups 4+5+6     (15 max each)
+-- TEAM → SUBGROUP MAPPING (dynamic, supports 10 to 40-man raids)
+-- For team size N, each team uses ceil(N/5) subgroups (capped at 4 since
+-- a WoW raid only has 8 subgroups total):
+--   10-man  → A=group 1,           B=group 2              (5 max each)
+--   11-20   → A=groups 1+2,        B=groups 3+4           (10 max each)
+--   21-30   → A=groups 1+2+3,      B=groups 4+5+6         (15 max each)
+--   31-40   → A=groups 1+2+3+4,    B=groups 5+6+7+8       (20 max each)
 -- ============================================================
 function Splitter:GetTargetGroups(split)
     local maxTeam = math.max(#split.teamA, #split.teamB)
-    local perTeam = math.max(1, math.ceil(maxTeam / 5))
+    local perTeam = math.max(1, math.min(4, math.ceil(maxTeam / 5)))
     local A, B = {}, {}
     for i = 1, perTeam do A[#A + 1] = i end
     for i = 1, perTeam do B[#B + 1] = perTeam + i end

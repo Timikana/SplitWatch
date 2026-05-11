@@ -908,7 +908,7 @@ local function buildAboutPage(parent)
     local sub = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -10)
     sub:SetWidth(480); sub:SetJustifyH("LEFT")
-    sub:SetText(L["Auto-split a 10-30 man raid into 2 balanced teams (tanks, healers by HPS, DPS by damage) for split-mechanic encounters."])
+    sub:SetText(L["Auto-split a 10-40 man raid into 2 balanced teams (tanks, healers by HPS, DPS by damage) for split-mechanic encounters."])
 
     local meta = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     meta:SetPoint("TOPLEFT", sub, "BOTTOMLEFT", 0, -10)
@@ -976,7 +976,7 @@ local function buildAboutPage(parent)
             L["• Test mode (/splitw test) for UI preview without a raid."],
             L["• Damage meter sources: Details!, Recount, Skada, Manual."],
             L["• Healers balanced by HPS (live read from the active source), DPS by damage."],
-            L["• Supports raids from 10 to 30 members — subgroups assigned dynamically."],
+            L["• Supports raids from 10 to 40 members — subgroups assigned dynamically."],
             L["• Collapsible sections with per-section reset, persisted across reloads."],
         }},
     }
