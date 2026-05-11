@@ -391,9 +391,11 @@ local function buildPreviewPage(parent)
         end
     end, L["Move every player to their assigned subgroup. Requires leader or assistant."])
 
-    -- BEFORE / AFTER label
+    -- BEFORE / AFTER label. Use a Blizzard texture inline for the arrow because
+    -- the FRIZQT__ font doesn't include U+2192 → and renders it as an empty box.
+    local ARROW_TEX = "|TInterface\\Buttons\\UI-SpellbookIcon-NextPage-Up:18:18:0:0|t"
     local beforeFS = makeLabel(parent, "|cffaaaaaa" .. L["Before"] .. "|r", 14, -78, "GameFontNormalLarge")
-    local arrowFS  = makeLabel(parent, "  →  ", 320, -78, "GameFontNormalLarge")
+    local arrowFS  = makeLabel(parent, ARROW_TEX, 326, -80, "GameFontNormalLarge")
     local afterFS  = makeLabel(parent, "|cffffd100" .. L["After"] .. "|r", 360, -78, "GameFontNormalLarge")
 
     -- Stats lines
@@ -425,11 +427,11 @@ local function buildPreviewPage(parent)
     warnFS:SetWidth(640); warnFS:SetJustifyH("LEFT")
 
     local WARN_TEXT = {
-        ONE_TANK    = L["⚠ Only one tank — both teams share the same tank? Check your roster."],
-        NO_TANK     = L["⚠ No tank detected in the raid."],
-        TEAM_A_OVER = L["⚠ Team A has more than 10 players — cannot fit in two subgroups."],
-        TEAM_B_OVER = L["⚠ Team B has more than 10 players — cannot fit in two subgroups."],
-        UNEVEN_25   = L["⚠ Raid > 20 members — split will be uneven (algorithm tuned for 20-man)."],
+        ONE_TANK    = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tOnly one tank — both teams share the same tank? Check your roster."],
+        NO_TANK     = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tNo tank detected in the raid."],
+        TEAM_A_OVER = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam A has more than 10 players — cannot fit in two subgroups."],
+        TEAM_B_OVER = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam B has more than 10 players — cannot fit in two subgroups."],
+        UNEVEN_25   = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tRaid > 20 members — split will be uneven (algorithm tuned for 20-man)."],
     }
 
     local function fmtTeam(team, sum)
@@ -606,10 +608,12 @@ local function build()
         pcall(panel.SetPortraitToAsset, panel, PORTRAIT_TEX)
     end
 
-    -- Page holder (matches BossWatch bounds)
+    -- Page holder — leave a clear strip at the bottom so the docked tabs aren't
+    -- visually clipped under page content (BW gets away with 8px because its pages
+    -- are scrollable; ours aren't yet, so use 32px).
     pageHolder = CreateFrame("Frame", nil, panel)
     pageHolder:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -60)
-    pageHolder:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -8, 8)
+    pageHolder:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -8, 32)
 
     local function makePage(name, builder)
         local p = CreateFrame("Frame", nil, pageHolder)

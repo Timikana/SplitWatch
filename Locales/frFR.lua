@@ -62,15 +62,15 @@ L["Team B (groups 3-4)"] = "Équipe B (groupes 3-4)"
 L["No split computed yet — click 'Compute split'."] = "Aucun split calculé — clique sur 'Calculer le split'."
 L["(empty)"] = "(vide)"
 L["Looks good — no warnings."] = "Tout est bon — aucun avertissement."
-L["⚠ Only one tank — both teams share the same tank? Check your roster."] =
-    "⚠ Un seul tank — les deux équipes partagent le même tank ? Vérifie ton roster."
-L["⚠ No tank detected in the raid."] = "⚠ Aucun tank détecté dans le raid."
-L["⚠ Team A has more than 10 players — cannot fit in two subgroups."] =
-    "⚠ L'équipe A dépasse 10 joueurs — impossible de tenir dans deux sous-groupes."
-L["⚠ Team B has more than 10 players — cannot fit in two subgroups."] =
-    "⚠ L'équipe B dépasse 10 joueurs — impossible de tenir dans deux sous-groupes."
-L["⚠ Raid > 20 members — split will be uneven (algorithm tuned for 20-man)."] =
-    "⚠ Raid > 20 membres — le split sera déséquilibré (algorithme calibré pour 20)."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tOnly one tank — both teams share the same tank? Check your roster."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tUn seul tank — les deux équipes partagent le même tank ? Vérifie ton roster."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tNo tank detected in the raid."] = "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tAucun tank détecté dans le raid."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam A has more than 10 players — cannot fit in two subgroups."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tL'équipe A dépasse 10 joueurs — impossible de tenir dans deux sous-groupes."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam B has more than 10 players — cannot fit in two subgroups."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tL'équipe B dépasse 10 joueurs — impossible de tenir dans deux sous-groupes."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tRaid > 20 members — split will be uneven (algorithm tuned for 20-man)."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tRaid > 20 membres — le split sera déséquilibré (algorithme calibré pour 20)."
 L["Apply the proposed split? This will move raid members."] =
     "Appliquer le split proposé ? Cela va déplacer les membres du raid."
 
@@ -122,7 +122,7 @@ L["test mode off"] = "mode test désactivé"
 -- Misc
 L["|cffffd100SplitWatch|r v%s loaded — type |cffffff00/splitw|r for options"] =
     "|cffffd100SplitWatch|r v%s chargé — tape |cffffff00/splitw|r pour les options"
-L["WARN_CLASSIC"] = "⚠ Version Classic — UI pas encore testée à fond en raid, merci de signaler les bugs."
+L["WARN_CLASSIC"] = "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tVersion Classic — UI pas encore testée à fond en raid, merci de signaler les bugs."
 L["Panel"] = "Panneau"
 L["Panel opacity"] = "Opacité du panneau"
 L["Opacity of this options window. Saved account-wide."] = "Opacité de cette fenêtre. Sauvegardée pour tout le compte."
