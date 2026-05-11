@@ -371,8 +371,10 @@ local function buildSetupPage(parent)
         if #list == 0 and SplitW.DPSSource and SplitW.DPSSource.ListActors then
             local actors = SplitW.DPSSource:ListActors()
             for _, a in ipairs(actors) do
-                table.insert(list, { name = a.name, class = a.class,
-                                     role = "DAMAGER", _sourceDps = a.dps, _sourceHps = a.hps })
+                if type(a.name) == "string" and a.name ~= "" then
+                    table.insert(list, { name = a.name, class = a.class,
+                                         role = "DAMAGER", _sourceDps = a.dps, _sourceHps = a.hps })
+                end
             end
             fromSource = true
         end
@@ -399,7 +401,7 @@ local function buildSetupPage(parent)
             end
             row.roleFS:SetText(fromSource and "" or roleIcon(entry.role))
             local r, g, b = classColor(entry.class)
-            row.nameFS:SetText(entry.name)
+            row.nameFS:SetText(entry.name or "?")
             row.nameFS:SetTextColor(r, g, b)
             local dps = entry._sourceDps or (SplitW.DPSSource and SplitW.DPSSource:GetDPS(entry.name))
             local hps = entry._sourceHps or (SplitW.DPSSource and SplitW.DPSSource:GetHPS(entry.name))
