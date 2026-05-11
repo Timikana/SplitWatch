@@ -516,17 +516,21 @@ local function buildSetupPage(parent)
     parent._refreshPreview = refreshPreview
     refreshPreview()
 
-    -- Auto-refresh every 1.5s while the Setup page is visible (covers live
-    -- combat ticks without spamming on hidden tabs).
+    -- Auto-refresh every 1.5s while the Setup page is visible. Attach to the
+    -- outer ScrollFrame (parent's parent) since content frames inside a
+    -- ScrollFrame don't reliably fire OnShow when the SF is shown/hidden.
+    local pageSF = parent:GetParent()
     local ticker
-    parent:SetScript("OnShow", function()
-        refreshPreview()
-        if ticker then ticker:Cancel() end
-        ticker = C_Timer.NewTicker(1.5, refreshPreview)
-    end)
-    parent:SetScript("OnHide", function()
-        if ticker then ticker:Cancel(); ticker = nil end
-    end)
+    if pageSF then
+        pageSF:HookScript("OnShow", function()
+            refreshPreview()
+            if ticker then ticker:Cancel() end
+            ticker = C_Timer.NewTicker(1.5, refreshPreview)
+        end)
+        pageSF:HookScript("OnHide", function()
+            if ticker then ticker:Cancel(); ticker = nil end
+        end)
+    end
 
     makeSection(parent, L["Permission status"], 14, -510, "setup.permissions")
     local permFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -546,7 +550,7 @@ local function buildSetupPage(parent)
     -- Classic banner
     if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE and WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE then
         local banner = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        banner:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", 14, 14)
+        banner:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -580)
         banner:SetWidth(640); banner:SetJustifyH("LEFT")
         banner:SetText("|cffffd100" .. L["WARN_CLASSIC"] .. "|r")
     end
@@ -569,10 +573,12 @@ local function buildWeightsPage(parent)
     hint:SetText("|cffaaaaaa" .. L["Adjust each DPS player's relative weight (1-100). Higher = goes into the lower-scoring team first."] .. "|r")
     _registerInSection(hint)
 
-    -- Scroll frame
+    -- Scroll frame — TOPLEFT + fixed size so reparenting into the section
+    -- container doesn't bind it to a BOTTOMRIGHT that itself depends on the
+    -- container's height (circular sizing).
     local scroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -56)
-    scroll:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -32, 56)
+    scroll:SetSize(640, 360)
     local content = CreateFrame("Frame", nil, scroll)
     content:SetSize(620, 1)
     scroll:SetScrollChild(content)
@@ -646,28 +652,23 @@ local function buildWeightsPage(parent)
         end
     end
 
-    -- Bottom action bar
-    local resetBtn = makeButton(parent, L["Reset all weights"], 14, -8, 160, function()
+    -- Action bar — below the scroll (TOPLEFT-anchored at a fixed Y rather than
+    -- BOTTOMLEFT, so the chained section sizes them predictably).
+    local resetBtn = makeButton(parent, L["Reset all weights"], 14, -428, 160, function()
         local db = SplitW:GetDB()
         local default = db.weightDefault or 50
         for k in pairs(db.weights) do db.weights[k] = default end
         populate()
     end, L["Reset every stored weight back to the default value."])
-    resetBtn:ClearAllPoints()
-    resetBtn:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", 14, 14)
 
-    local refreshBtn = makeButton(parent, L["Refresh roster"], 0, 0, 160, function()
+    local refreshBtn = makeButton(parent, L["Refresh roster"], 182, -428, 160, function()
         populate()
     end, L["Re-read the raid roster from Blizzard's API."])
-    refreshBtn:ClearAllPoints()
-    refreshBtn:SetPoint("LEFT", resetBtn, "RIGHT", 8, 0)
 
-    local testBtn = makeButton(parent, L["Toggle test mode"], 0, 0, 160, function()
+    local testBtn = makeButton(parent, L["Toggle test mode"], 350, -428, 160, function()
         SplitW.Roster:SetTestMode(not SplitW.Roster:IsTestMode())
         populate()
     end, L["Use a simulated 20-man roster for UI testing."])
-    testBtn:ClearAllPoints()
-    testBtn:SetPoint("LEFT", refreshBtn, "RIGHT", 8, 0)
 
     parent.refresh = populate
     populate()
@@ -741,9 +742,12 @@ local function buildPreviewPage(parent)
     local titleA, listA = makeTeamColumn(L["Team A"], 14)
     local titleB, listB = makeTeamColumn(L["Team B"], 360)
 
-    -- Warnings line
+    -- Warnings — placed below the team columns at a fixed Y. With the outer
+    -- page ScrollFrame, this is fine even if team lists for a 30-man push it
+    -- below the viewport (user scrolls). A BOTTOMLEFT anchor would track
+    -- container.bottom, which moves as the team lists grow, so we avoid it.
     local warnFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    warnFS:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", 14, 14)
+    warnFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -460)
     warnFS:SetWidth(640); warnFS:SetJustifyH("LEFT")
     _registerInSection(warnFS)
 
@@ -1021,13 +1025,47 @@ local function build()
     pageHolder:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -60)
     pageHolder:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -8, 32)
 
+    -- Each page is a ScrollFrame so tall content gets a Blizzard scrollbar
+    -- (UIPanelScrollFrameTemplate). The builder receives the inner content
+    -- frame as its `parent` so widgets created inside it sit on the scrollable
+    -- canvas. Mirror of BossWatch's newPage() pattern.
     local function makePage(name, builder)
-        local p = CreateFrame("Frame", nil, pageHolder)
-        p:SetAllPoints(pageHolder)
-        p:Hide()
-        builder(p)
-        pages[name] = p
-        return p
+        local sf = CreateFrame("ScrollFrame", "SWScroll_"..name, pageHolder, "UIPanelScrollFrameTemplate")
+        sf:SetPoint("TOPLEFT",     pageHolder, "TOPLEFT",      0, 0)
+        sf:SetPoint("BOTTOMRIGHT", pageHolder, "BOTTOMRIGHT", -24, 0)
+        sf:Hide()
+
+        local content = CreateFrame("Frame", nil, sf)
+        content:SetSize(680, 800)
+        sf:SetScrollChild(content)
+        sf.content = content
+        -- Keep the canvas width in sync with the scroll viewport so widgets
+        -- anchored to TOPRIGHT stick to the visible edge as the panel resizes.
+        sf:SetScript("OnSizeChanged", function(self, w, _)
+            if w and w > 0 and self.content then self.content:SetWidth(w) end
+        end)
+
+        builder(content)
+
+        -- After widgets are built, size the content frame so it covers the
+        -- bottom of the lowest registered section. Deferred so anchors resolve.
+        C_Timer.After(0.05, function()
+            local secs = _allSectionsOnPage[content]
+            if not secs then return end
+            local lowest = content:GetTop() or 0
+            for _, s in ipairs(secs) do
+                if s.container and s.container.GetBottom then
+                    local b = s.container:GetBottom()
+                    if b and b < lowest then lowest = b end
+                end
+            end
+            local top = content:GetTop() or 0
+            local span = math.max(800, top - lowest + 24)
+            content:SetHeight(span)
+        end)
+
+        pages[name] = sf
+        return sf
     end
 
     makePage("setup",   buildSetupPage)
