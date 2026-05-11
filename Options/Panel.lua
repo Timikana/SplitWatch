@@ -361,10 +361,21 @@ local function buildSetupPage(parent)
 
     local function refreshPreview()
         local roster = SplitW.Roster:Scan()
-        local list = {}
+        local list, fromSource = {}, false
+        -- Prefer roster (real or test) so role icons + class colors are accurate.
         for _, e in ipairs(roster.tanks)   do table.insert(list, e) end
         for _, e in ipairs(roster.healers) do table.insert(list, e) end
         for _, e in ipairs(roster.dps)     do table.insert(list, e) end
+        -- No roster — fall back to whatever actors the active source has, so the
+        -- user can confirm Details!/Recount/Skada is wired up even when solo.
+        if #list == 0 and SplitW.DPSSource and SplitW.DPSSource.ListActors then
+            local actors = SplitW.DPSSource:ListActors()
+            for _, a in ipairs(actors) do
+                table.insert(list, { name = a.name, class = a.class,
+                                     role = "DAMAGER", _sourceDps = a.dps, _sourceHps = a.hps })
+            end
+            fromSource = true
+        end
 
         for i, entry in ipairs(list) do
             local row = previewRows[i]
@@ -386,12 +397,12 @@ local function buildSetupPage(parent)
                 row.hpsFS:SetWidth(140); row.hpsFS:SetJustifyH("LEFT")
                 previewRows[i] = row
             end
-            row.roleFS:SetText(roleIcon(entry.role))
+            row.roleFS:SetText(fromSource and "" or roleIcon(entry.role))
             local r, g, b = classColor(entry.class)
             row.nameFS:SetText(entry.name)
             row.nameFS:SetTextColor(r, g, b)
-            local dps = SplitW.DPSSource and SplitW.DPSSource:GetDPS(entry.name)
-            local hps = SplitW.DPSSource and SplitW.DPSSource:GetHPS(entry.name)
+            local dps = entry._sourceDps or (SplitW.DPSSource and SplitW.DPSSource:GetDPS(entry.name))
+            local hps = entry._sourceHps or (SplitW.DPSSource and SplitW.DPSSource:GetHPS(entry.name))
             row.dpsFS:SetText("|cffaaaaaaDPS:|r " .. fmtNum(dps))
             row.hpsFS:SetText("|cffaaaaaaHPS:|r " .. fmtNum(hps))
             row:Show()
@@ -402,7 +413,7 @@ local function buildSetupPage(parent)
         if #list == 0 then
             previewEmpty = previewEmpty or previewContent:CreateFontString(nil, "OVERLAY", "GameFontDisable")
             previewEmpty:SetPoint("TOPLEFT", previewContent, "TOPLEFT", 14, -8)
-            previewEmpty:SetText(L["No roster — enable test mode or join a raid."])
+            previewEmpty:SetText(L["No data — join a raid, enable test mode, or fight something so the active source has actors to show."])
             previewEmpty:Show()
         elseif previewEmpty then
             previewEmpty:Hide()

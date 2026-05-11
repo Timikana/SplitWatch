@@ -211,6 +211,101 @@ function DPSSource:GetHPS(name)
     return nil
 end
 
+-- ============================================================
+-- LIST ACTORS — enumerates everyone the active source has data for.
+-- Used by the preview pane when the user isn't in a raid so they can still
+-- verify Details!/Recount/Skada is hooked correctly. Returns:
+--   { { name = "...", class = "WARRIOR" | nil, dps = N|nil, hps = N|nil }, ... }
+-- ============================================================
+local function listFromDetails()
+    local out = {}
+    local Details = _G.Details
+    if not Details then return out end
+    local ok, combat = pcall(function() return Details:GetCurrentCombat() end)
+    if not ok or not combat then
+        ok, combat = pcall(function() return Details:GetCombat(1) end)
+        if not ok or not combat then return out end
+    end
+    local elapsed = (combat.GetCombatTime and combat:GetCombatTime()) or 1
+    if elapsed <= 0 then elapsed = 1 end
+    local dmgContainer  = combat.GetContainer and combat:GetContainer(1)
+    local healContainer = combat.GetContainer and combat:GetContainer(2)
+    local seen = {}
+    local function walk(container, key)
+        if not container then return end
+        local iter = container.GetIterator and container:GetIterator() or container
+        for _, actor in pairs(iter) do
+            if type(actor) == "table" then
+                local n = actor.nome or actor.name
+                if n then
+                    local rec = seen[n] or { name = n, class = actor.classe or actor.class }
+                    local total = actor.total or 0
+                    if total > 0 then rec[key] = total / elapsed end
+                    seen[n] = rec
+                end
+            end
+        end
+    end
+    walk(dmgContainer,  "dps")
+    walk(healContainer, "hps")
+    for _, rec in pairs(seen) do out[#out + 1] = rec end
+    return out
+end
+
+local function listFromRecount()
+    local out = {}
+    local Recount = _G.Recount
+    if not Recount then return out end
+    local cur = Recount.CurrentDataCollect
+    if Recount.db2 and Recount.db2.combats and cur and Recount.db2.combats[cur] then
+        local fight = Recount.db2.combats[cur].Fight
+        if fight then
+            for n, p in pairs(fight) do
+                if type(p) == "table" then
+                    local dps = (p.Damage and p.ActiveTime and p.ActiveTime > 0)
+                        and (p.Damage / p.ActiveTime) or nil
+                    local hps = (p.Healing and p.ActiveTime and p.ActiveTime > 0)
+                        and (p.Healing / p.ActiveTime) or nil
+                    out[#out + 1] = { name = n, dps = dps, hps = hps, class = p.Class or p.class }
+                end
+            end
+        end
+    end
+    return out
+end
+
+local function listFromSkada()
+    local out = {}
+    local Skada = _G.Skada
+    if not Skada then return out end
+    local set = Skada.current or (Skada.GetSet and Skada:GetSet("current"))
+    if not set or not set.players then
+        set = Skada.last or (Skada.GetSet and Skada:GetSet("last"))
+    end
+    if not set or not set.players then return out end
+    local elapsed = set.time or 1
+    if elapsed <= 0 then elapsed = 1 end
+    for _, p in ipairs(set.players) do
+        local dmg  = p.damage or p.damagedone or 0
+        local heal = p.healing or p.healingdone or p.heal or 0
+        out[#out + 1] = {
+            name  = p.name,
+            class = p.class,
+            dps   = (dmg  > 0) and (dmg  / elapsed) or nil,
+            hps   = (heal > 0) and (heal / elapsed) or nil,
+        }
+    end
+    return out
+end
+
+function DPSSource:ListActors()
+    local src = SplitW:GetDB().dpsSource
+    if src == "DETAILS" then return listFromDetails() end
+    if src == "RECOUNT" then return listFromRecount() end
+    if src == "SKADA"   then return listFromSkada() end
+    return {}
+end
+
 function DPSSource:IsAvailable(source)
     if source == "BUILTIN" then return DPSSource._builtinAvailable and true or false end
     if source == "DETAILS" then return _G.Details ~= nil end

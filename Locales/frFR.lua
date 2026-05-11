@@ -134,5 +134,9 @@ L["Source preview"] = "Aperçu de la source"
 L["Live values read from the selected source for the current (or test) roster."] =
     "Valeurs lues en direct depuis la source sélectionnée, pour le roster actuel (ou test)."
 L["No roster — enable test mode or join a raid."] = "Pas de roster — active le mode test ou rejoins un raid."
+L["No data — join a raid, enable test mode, or fight something so the active source has actors to show."] =
+    "Pas de données — rejoins un raid, active le mode test, ou tape sur quelque chose pour que la source active ait des acteurs à afficher."
+L["Details!/Recount/Skada read live DPS+HPS from those addons when loaded. Manual uses the per-player sliders on the Weights tab."] =
+    "Details!/Recount/Skada lisent DPS et HPS en direct depuis ces addons quand ils sont chargés. Manuel utilise les sliders par joueur de l'onglet Poids."
 L["Click to collapse/expand this section."] = "Clic pour réduire/déplier cette section."
 L["Reset this section to default values."] = "Réinitialise cette section aux valeurs par défaut."
