@@ -316,7 +316,6 @@ local function buildSetupPage(parent)
 
     makeSection(parent, L["DPS source"], 14, -160, "setup.dps_source", 420)
     local sources = {
-        { text = L["Built-in (combat log)"],      value = "BUILTIN" },
         { text = "Details!",                       value = "DETAILS" },
         { text = "Recount",                        value = "RECOUNT" },
         { text = "Skada",                          value = "SKADA"   },
@@ -324,7 +323,7 @@ local function buildSetupPage(parent)
     }
     makeDropdown(parent, L["Pick the data source for DPS / HPS"], "dpsSource",
         sources, 14, -195, 220,
-        L["Built-in parses the WoW combat log natively (no addon needed). Details!/Recount/Skada read from those addons when loaded. Manual uses the Weights tab sliders."])
+        L["Details!/Recount/Skada read live DPS+HPS from those addons when loaded. Manual uses the per-player sliders on the Weights tab."])
 
     local statusFS = makeLabel(parent, "", 260, -211)
     statusFS.refresh = function()

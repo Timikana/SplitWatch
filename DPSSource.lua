@@ -53,18 +53,13 @@ local function trackCombatEvent()
 end
 
 local clf = CreateFrame("Frame")
--- WoW 12.0 surfaces "ADDON_ACTION_FORBIDDEN" on Frame:RegisterEvent for
--- COMBAT_LOG_EVENT_UNFILTERED in some load contexts (cause is opaque — other
--- damage meters succeed). Wrap in pcall so a failure doesn't abort the file
--- load; the addon stays functional with Details!/Recount/Skada/Manual sources.
-DPSSource._builtinAvailable = true
-local function safeRegister(event)
-    local ok = pcall(function() clf:RegisterEvent(event) end)
-    if not ok then DPSSource._builtinAvailable = false end
-end
-safeRegister("PLAYER_REGEN_DISABLED")
-safeRegister("PLAYER_REGEN_ENABLED")
-safeRegister("COMBAT_LOG_EVENT_UNFILTERED")
+-- WoW 12.0 surfaces ADDON_ACTION_FORBIDDEN on COMBAT_LOG_EVENT_UNFILTERED
+-- when SplitWatch registers it (root cause undiagnosed — Details!/Recount/Skada
+-- all succeed). Deferring registration to PLAYER_LOGIN doesn't fix it either;
+-- the protection appears to apply specifically to our load context. So the
+-- built-in tracker stays unwired by default — the addon falls back gracefully
+-- to Details!/Recount/Skada/Manual.
+DPSSource._builtinAvailable = false
 clf:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_REGEN_DISABLED" then
         wipe(builtin.totalDamage)
