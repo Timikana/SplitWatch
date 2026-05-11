@@ -211,10 +211,96 @@ local function buildSetupPage(parent)
     end
     statusFS:refresh()
 
-    makeHeader(parent, L["Permission status"], 14, -260)
+    -- ---- Source preview (live read of DPS+HPS for the current roster) ----
+    makeHeader(parent, L["Source preview"], 14, -250)
+    local hintFS = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    hintFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -274)
+    hintFS:SetWidth(640); hintFS:SetJustifyH("LEFT")
+    hintFS:SetText(L["Live values read from the selected source for the current (or test) roster."])
+
+    local previewScroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
+    previewScroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -292)
+    previewScroll:SetSize(640, 160)
+    local previewContent = CreateFrame("Frame", nil, previewScroll)
+    previewContent:SetSize(620, 1)
+    previewScroll:SetScrollChild(previewContent)
+    local previewRows = {}
+
+    local function fmtNum(v)
+        if not v or v <= 0 then return "|cff666666—|r" end
+        if v >= 1e6 then return string.format("%.2fM", v / 1e6) end
+        if v >= 1e3 then return string.format("%.1fk", v / 1e3) end
+        return string.format("%d", math.floor(v + 0.5))
+    end
+
+    local function refreshPreview()
+        local roster = SplitW.Roster:Scan()
+        local list = {}
+        for _, e in ipairs(roster.tanks)   do table.insert(list, e) end
+        for _, e in ipairs(roster.healers) do table.insert(list, e) end
+        for _, e in ipairs(roster.dps)     do table.insert(list, e) end
+
+        for i, entry in ipairs(list) do
+            local row = previewRows[i]
+            if not row then
+                row = CreateFrame("Frame", nil, previewContent)
+                row:SetSize(620, 18)
+                row:SetPoint("TOPLEFT", previewContent, "TOPLEFT", 0, -(i - 1) * 18)
+                row.roleFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                row.roleFS:SetPoint("LEFT", row, "LEFT", 0, 0)
+                row.roleFS:SetWidth(20); row.roleFS:SetJustifyH("CENTER")
+                row.nameFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                row.nameFS:SetPoint("LEFT", row.roleFS, "RIGHT", 4, 0)
+                row.nameFS:SetWidth(180); row.nameFS:SetJustifyH("LEFT")
+                row.dpsFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                row.dpsFS:SetPoint("LEFT", row.nameFS, "RIGHT", 8, 0)
+                row.dpsFS:SetWidth(140); row.dpsFS:SetJustifyH("LEFT")
+                row.hpsFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                row.hpsFS:SetPoint("LEFT", row.dpsFS, "RIGHT", 8, 0)
+                row.hpsFS:SetWidth(140); row.hpsFS:SetJustifyH("LEFT")
+                previewRows[i] = row
+            end
+            row.roleFS:SetText(roleIcon(entry.role))
+            local r, g, b = classColor(entry.class)
+            row.nameFS:SetText(entry.name)
+            row.nameFS:SetTextColor(r, g, b)
+            local dps = SplitW.DPSSource and SplitW.DPSSource:GetDPS(entry.name)
+            local hps = SplitW.DPSSource and SplitW.DPSSource:GetHPS(entry.name)
+            row.dpsFS:SetText("|cffaaaaaaDPS:|r " .. fmtNum(dps))
+            row.hpsFS:SetText("|cffaaaaaaHPS:|r " .. fmtNum(hps))
+            row:Show()
+        end
+        for i = #list + 1, #previewRows do previewRows[i]:Hide() end
+        previewContent:SetHeight(math.max(1, #list * 18 + 4))
+
+        if #list == 0 then
+            previewEmpty = previewEmpty or previewContent:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+            previewEmpty:SetPoint("TOPLEFT", previewContent, "TOPLEFT", 14, -8)
+            previewEmpty:SetText(L["No roster — enable test mode or join a raid."])
+            previewEmpty:Show()
+        elseif previewEmpty then
+            previewEmpty:Hide()
+        end
+    end
+    parent._refreshPreview = refreshPreview
+    refreshPreview()
+
+    -- Auto-refresh every 1.5s while the Setup page is visible (covers live
+    -- combat ticks without spamming on hidden tabs).
+    local ticker
+    parent:SetScript("OnShow", function()
+        refreshPreview()
+        if ticker then ticker:Cancel() end
+        ticker = C_Timer.NewTicker(1.5, refreshPreview)
+    end)
+    parent:SetScript("OnHide", function()
+        if ticker then ticker:Cancel(); ticker = nil end
+    end)
+
+    makeHeader(parent, L["Permission status"], 360, -250)
     local permFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    permFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -290)
-    permFS:SetWidth(640); permFS:SetJustifyH("LEFT")
+    permFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -278)
+    permFS:SetWidth(300); permFS:SetJustifyH("LEFT")
     permFS.refresh = function()
         local ok, err = SplitW.Apply:CanApply()
         if ok then
@@ -256,6 +342,7 @@ local function buildSetupPage(parent)
     parent.refresh = function()
         statusFS:refresh()
         permFS:refresh()
+        if parent._refreshPreview then parent._refreshPreview() end
     end
 end
 
