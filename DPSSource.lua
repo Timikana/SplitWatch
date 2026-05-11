@@ -103,34 +103,42 @@ local function getHPSFromBuiltin(name)
 end
 
 -- ============================================================
--- DETAILS! — containerIdx 1 = damage, 2 = healing
+-- DETAILS! — attr 1 = damage, 2 = healing.
+-- Try current combat, then the last completed combat (GetCombat(1)) so the
+-- preview still shows DPS/HPS after a fight ends.
 -- ============================================================
-local function getFromDetails(name, containerIdx)
+local function _detailsCombat()
     local Details = _G.Details
     if not Details then return nil end
-    local ok, combat = pcall(function() return Details:GetCurrentCombat() end)
-    if not ok or not combat then
-        ok, combat = pcall(function() return Details:GetCombat(1) end)
-        if not ok or not combat then return nil end
+    local ok, c = pcall(function() return Details:GetCurrentCombat() end)
+    if ok and c and c.GetCombatTime and c:GetCombatTime() > 0 then return c end
+    ok, c = pcall(function() return Details:GetCombat(1) end)
+    if ok and c then return c end
+    return nil
+end
+
+local function _detailsActors(combat, attr)
+    if not combat then return nil end
+    if combat.GetActorList then
+        local ok, list = pcall(combat.GetActorList, combat, attr)
+        if ok and type(list) == "table" then return list end
     end
-    local container = combat and combat.GetContainer and combat:GetContainer(containerIdx)
-    if not container and combat.GetActorList then
-        container = combat:GetActorList(containerIdx)
-    end
-    if not container then return nil end
+    return nil
+end
+
+local function getFromDetails(name, attr)
+    local combat = _detailsCombat()
+    local actors = _detailsActors(combat, attr)
+    if not actors then return nil end
     local actor
-    if type(container) == "table" and container.GetActor then
-        actor = container:GetActor(name)
-    elseif type(container) == "table" then
-        for _, a in ipairs(container) do
-            if a.nome == name or a.name == name then actor = a; break end
-        end
+    for _, a in ipairs(actors) do
+        if a.nome == name or a.name == name then actor = a; break end
     end
     if not actor then return nil end
     local total = actor.total or 0
     local elapsed = (combat.GetCombatTime and combat:GetCombatTime()) or actor.tempo or 1
     if elapsed <= 0 then elapsed = 1 end
-    return total / elapsed
+    return total > 0 and (total / elapsed) or nil
 end
 
 -- ============================================================
@@ -219,36 +227,33 @@ end
 -- ============================================================
 local function listFromDetails()
     local out = {}
-    local Details = _G.Details
-    if not Details then return out end
-    local ok, combat = pcall(function() return Details:GetCurrentCombat() end)
-    if not ok or not combat then
-        ok, combat = pcall(function() return Details:GetCombat(1) end)
-        if not ok or not combat then return out end
-    end
+    local combat = _detailsCombat()
+    if not combat then return out end
     local elapsed = (combat.GetCombatTime and combat:GetCombatTime()) or 1
     if elapsed <= 0 then elapsed = 1 end
-    local dmgContainer  = combat.GetContainer and combat:GetContainer(1)
-    local healContainer = combat.GetContainer and combat:GetContainer(2)
+
     local seen = {}
-    local function walk(container, key)
-        if not container then return end
-        local iter = container.GetIterator and container:GetIterator() or container
-        for _, actor in pairs(iter) do
-            if type(actor) == "table" then
-                local n = actor.nome or actor.name
-                if n then
-                    local rec = seen[n] or { name = n, class = actor.classe or actor.class }
-                    local total = actor.total or 0
-                    if total > 0 then rec[key] = total / elapsed end
-                    seen[n] = rec
-                end
+    local function walk(actors, key)
+        if not actors then return end
+        for _, actor in ipairs(actors) do
+            local n = actor.nome or actor.name
+            -- Drop only the synthetic [*] aggregate Details inserts at index 1
+            -- (its name starts with [). Keep everything else so solo / pet
+            -- damage / environment actors all show up — better to show too
+            -- much than miss the player.
+            if type(n) == "string" and not n:match("^%[") then
+                local rec = seen[n] or { name = n, class = actor.classe or actor.class }
+                local total = actor.total or 0
+                if total > 0 then rec[key] = total / elapsed end
+                seen[n] = rec
             end
         end
     end
-    walk(dmgContainer,  "dps")
-    walk(healContainer, "hps")
-    for _, rec in pairs(seen) do out[#out + 1] = rec end
+    walk(_detailsActors(combat, 1), "dps")
+    walk(_detailsActors(combat, 2), "hps")
+    for _, rec in pairs(seen) do
+        if rec.dps or rec.hps then out[#out + 1] = rec end
+    end
     return out
 end
 
