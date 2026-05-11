@@ -432,15 +432,15 @@ local function buildSetupPage(parent)
     local sourcePrevSection = makeSection(parent, L["Source preview"], 14, -340, "setup.source_preview")
     local hintFS = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     hintFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -364)
-    hintFS:SetWidth(640); hintFS:SetJustifyH("LEFT")
+    hintFS:SetWidth(600); hintFS:SetJustifyH("LEFT")
     hintFS:SetText(L["Live values read from the selected source for the current (or test) roster."])
     _registerInSection(hintFS)
 
     local previewScroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
     previewScroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -382)
-    previewScroll:SetSize(640, 110)
+    previewScroll:SetSize(600, 110)
     local previewContent = CreateFrame("Frame", nil, previewScroll)
-    previewContent:SetSize(620, 1)
+    previewContent:SetSize(580, 1)
     previewScroll:SetScrollChild(previewContent)
     _registerInSection(previewScroll)
     local previewRows = {}
@@ -476,7 +476,7 @@ local function buildSetupPage(parent)
             local row = previewRows[i]
             if not row then
                 row = CreateFrame("Frame", nil, previewContent)
-                row:SetSize(620, 18)
+                row:SetSize(580, 18)
                 row:SetPoint("TOPLEFT", previewContent, "TOPLEFT", 0, -(i - 1) * 18)
                 row.roleFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
                 row.roleFS:SetPoint("LEFT", row, "LEFT", 0, 0)
@@ -508,6 +508,7 @@ local function buildSetupPage(parent)
         if #list == 0 then
             previewEmpty = previewEmpty or previewContent:CreateFontString(nil, "OVERLAY", "GameFontDisable")
             previewEmpty:SetPoint("TOPLEFT", previewContent, "TOPLEFT", 14, -8)
+            previewEmpty:SetWidth(560); previewEmpty:SetJustifyH("LEFT")
             previewEmpty:SetText(L["No data — join a raid, enable test mode, or fight something so the active source has actors to show."])
             previewEmpty:Show()
         elseif previewEmpty then
@@ -536,7 +537,7 @@ local function buildSetupPage(parent)
     makeSection(parent, L["Permission status"], 14, -510, "setup.permissions")
     local permFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     permFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -538)
-    permFS:SetWidth(640); permFS:SetJustifyH("LEFT")
+    permFS:SetWidth(600); permFS:SetJustifyH("LEFT")
     _registerInSection(permFS)
     permFS.refresh = function()
         local ok, err = SplitW.Apply:CanApply()
@@ -552,7 +553,7 @@ local function buildSetupPage(parent)
     if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE and WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE then
         local banner = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         banner:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -580)
-        banner:SetWidth(640); banner:SetJustifyH("LEFT")
+        banner:SetWidth(600); banner:SetJustifyH("LEFT")
         banner:SetText("|cffffd100" .. L["WARN_CLASSIC"] .. "|r")
     end
 
@@ -570,25 +571,26 @@ local function buildWeightsPage(parent)
     makeSection(parent, L["Manual weights"], 14, -8, "weights.main", 640)
     local hint = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     hint:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -32)
-    hint:SetWidth(640); hint:SetJustifyH("LEFT")
+    hint:SetWidth(600); hint:SetJustifyH("LEFT")
     hint:SetText("|cffaaaaaa" .. L["Adjust each DPS player's relative weight (1-100). Higher = goes into the lower-scoring team first."] .. "|r")
     _registerInSection(hint)
 
     -- Scroll frame — TOPLEFT + fixed size so reparenting into the section
     -- container doesn't bind it to a BOTTOMRIGHT that itself depends on the
-    -- container's height (circular sizing).
+    -- container's height (circular sizing). Width 600 keeps the inner
+    -- scrollbar well clear of the outer page scrollbar.
     local scroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -56)
-    scroll:SetSize(640, 360)
+    scroll:SetSize(600, 360)
     local content = CreateFrame("Frame", nil, scroll)
-    content:SetSize(620, 1)
+    content:SetSize(580, 1)
     scroll:SetScrollChild(content)
     _registerInSection(scroll)
 
     local rows = {}
     local function makeRow(idx)
         local row = CreateFrame("Frame", nil, content)
-        row:SetSize(620, 24)
+        row:SetSize(580, 24)
         row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(idx-1) * 26)
         -- Role icon (20px) FIRST, then name right next to it.
         row.roleFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -647,6 +649,7 @@ local function buildWeightsPage(parent)
         if #list == 0 then
             row_empty = row_empty or content:CreateFontString(nil, "OVERLAY", "GameFontDisable")
             row_empty:SetPoint("TOPLEFT", content, "TOPLEFT", 14, -10)
+            row_empty:SetWidth(560); row_empty:SetJustifyH("LEFT")
             row_empty:SetText(L["No raid members detected. Use /splitw test for a simulated 20-man roster."])
             row_empty:Show()
         elseif row_empty then
@@ -720,7 +723,7 @@ local function buildPreviewPage(parent)
 
     local modeFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     modeFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -68)
-    modeFS:SetWidth(640); modeFS:SetJustifyH("LEFT")
+    modeFS:SetWidth(600); modeFS:SetJustifyH("LEFT")
     _registerInSection(modeFS)
 
     -- BEFORE / AFTER label. Use a Blizzard texture inline for the arrow because
@@ -771,7 +774,7 @@ local function buildPreviewPage(parent)
     -- container.bottom, which moves as the team lists grow, so we avoid it.
     local warnFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     warnFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -460)
-    warnFS:SetWidth(640); warnFS:SetJustifyH("LEFT")
+    warnFS:SetWidth(600); warnFS:SetJustifyH("LEFT")
     _registerInSection(warnFS)
 
     local WARN_TEXT = {
@@ -912,7 +915,7 @@ local function buildAboutPage(parent)
     makeSection(parent, L["Slash commands"], 14, -160, "about.slash")
     local cmds = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     cmds:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -190)
-    cmds:SetWidth(640); cmds:SetJustifyH("LEFT"); cmds:SetSpacing(4)
+    cmds:SetWidth(600); cmds:SetJustifyH("LEFT"); cmds:SetSpacing(4)
     cmds:SetText(
         "|cffffff00/splitw|r — "         .. L["open options"] .. "\n" ..
         "|cffffff00/splitw preview|r — " .. L["compute and show split preview"] .. "\n" ..
@@ -979,7 +982,7 @@ local function buildAboutPage(parent)
         for _, line in ipairs(e.lines) do
             local l = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
             l:SetPoint("TOPLEFT", parent, "TOPLEFT", 24, y)
-            l:SetWidth(620); l:SetJustifyH("LEFT")
+            l:SetWidth(580); l:SetJustifyH("LEFT")
             l:SetText(line)
             _registerInSection(l)
             y = y - (math.ceil(l:GetStringHeight()) + 4)
