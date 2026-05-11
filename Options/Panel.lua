@@ -391,6 +391,17 @@ local function buildPreviewPage(parent)
         end
     end, L["Move every player to their assigned subgroup. Requires leader or assistant."])
 
+    -- Test-mode toggle (discoverable here too, not just on Weights page).
+    local testBtn = makeButton(parent, L["Toggle test mode"], 342, -38, 180, function()
+        SplitW.Roster:SetTestMode(not SplitW.Roster:IsTestMode())
+        local r = SplitW.Roster:Scan()
+        SplitW:GetDB().lastSplit = SplitW.Splitter:Compute(r)
+        if parent.refresh then parent.refresh() end
+    end, L["Use a simulated 20-man roster for UI testing."])
+
+    local modeFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    modeFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 528, -44)
+
     -- BEFORE / AFTER label. Use a Blizzard texture inline for the arrow because
     -- the FRIZQT__ font doesn't include U+2192 → and renders it as an empty box.
     local ARROW_TEX = "|TInterface\\Buttons\\UI-SpellbookIcon-NextPage-Up:18:18:0:0|t"
@@ -455,6 +466,13 @@ local function buildPreviewPage(parent)
 
     parent.refresh = function()
         local roster = SplitW.Roster:Scan()
+        if SplitW.Roster:IsTestMode() then
+            modeFS:SetText("|cffffd100" .. L["Test mode ON (20 simulated)"] .. "|r")
+        elseif roster.raid == 0 then
+            modeFS:SetText("|cffff8855" .. L["No raid detected — enable test mode to preview"] .. "|r")
+        else
+            modeFS:SetText("|cff66ff66" .. format(L["Live roster (%d members)"], roster.raid) .. "|r")
+        end
         -- BEFORE stats: count current subgroup distribution.
         local beforeA, beforeB = 0, 0
         local bTA, bHA, bDA = 0, 0, 0

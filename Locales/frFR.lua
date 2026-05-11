@@ -126,3 +126,6 @@ L["WARN_CLASSIC"] = "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0
 L["Panel"] = "Panneau"
 L["Panel opacity"] = "Opacité du panneau"
 L["Opacity of this options window. Saved account-wide."] = "Opacité de cette fenêtre. Sauvegardée pour tout le compte."
+L["Test mode ON (20 simulated)"] = "Mode test ACTIF (20 simulés)"
+L["No raid detected — enable test mode to preview"] = "Pas de raid détecté — active le mode test pour visualiser"
+L["Live roster (%d members)"] = "Raid réel (%d membres)"
