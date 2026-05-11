@@ -4,9 +4,11 @@ local L = SplitW.L
 
 -- Pages / tabs
 L["Setup"]    = "Réglages"
-L["Weights"]  = "Poids"
+L["Players"]  = "Joueurs"
 L["Preview"]  = "Aperçu"
 L["About"]    = "À propos"
+L["Enable test mode"]  = "Activer le mode test"
+L["Disable test mode"] = "Désactiver le mode test"
 
 -- General
 L["General"] = "Général"

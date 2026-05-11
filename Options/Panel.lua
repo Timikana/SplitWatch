@@ -88,10 +88,11 @@ local function classColor(class)
     return 0.8, 0.8, 0.8
 end
 
-local function roleIcon(role)
-    if role == "TANK"   then return "|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:14:14:0:0:64:64:0:19:22:41|t" end
-    if role == "HEALER" then return "|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:14:14:0:0:64:64:20:39:1:20|t" end
-    return "|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:14:14:0:0:64:64:20:39:22:41|t"
+local function roleIcon(role, size)
+    size = size or 14
+    if role == "TANK"   then return string.format("|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:%d:%d:0:0:64:64:0:19:22:41|t", size, size) end
+    if role == "HEALER" then return string.format("|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:%d:%d:0:0:64:64:20:39:1:20|t", size, size) end
+    return string.format("|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:%d:%d:0:0:64:64:20:39:22:41|t", size, size)
 end
 
 -- "NEW" badge: dismisses on first hover/click. Account-wide tracker.
@@ -587,18 +588,19 @@ local function buildWeightsPage(parent)
     local rows = {}
     local function makeRow(idx)
         local row = CreateFrame("Frame", nil, content)
-        row:SetSize(620, 22)
-        row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(idx-1) * 24)
+        row:SetSize(620, 24)
+        row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(idx-1) * 26)
+        -- Role icon (20px) FIRST, then name right next to it.
+        row.roleFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        row.roleFS:SetPoint("LEFT", row, "LEFT", 4, 0)
+        row.roleFS:SetWidth(22); row.roleFS:SetJustifyH("CENTER")
         row.nameFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        row.nameFS:SetPoint("LEFT", row, "LEFT", 4, 0)
-        row.nameFS:SetWidth(220); row.nameFS:SetJustifyH("LEFT")
-        row.roleFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        row.roleFS:SetPoint("LEFT", row.nameFS, "RIGHT", 4, 0)
-        row.roleFS:SetWidth(60); row.roleFS:SetJustifyH("LEFT")
+        row.nameFS:SetPoint("LEFT", row.roleFS, "RIGHT", 4, 0)
+        row.nameFS:SetWidth(200); row.nameFS:SetJustifyH("LEFT")
 
         row.slider = CreateFrame("Slider", nil, row, "OptionsSliderTemplate")
         row.slider:SetWidth(220); row.slider:SetHeight(14)
-        row.slider:SetPoint("LEFT", row.roleFS, "RIGHT", 8, 0)
+        row.slider:SetPoint("LEFT", row.nameFS, "RIGHT", 8, 0)
         row.slider:SetMinMaxValues(1, 100)
         row.slider:SetValueStep(1); row.slider:SetObeyStepOnDrag(true)
         if row.slider.Low  then row.slider.Low:SetText("1") end
@@ -633,7 +635,7 @@ local function buildWeightsPage(parent)
             local r, g, b = classColor(entry.class)
             row.nameFS:SetText(entry.name)
             row.nameFS:SetTextColor(r, g, b)
-            row.roleFS:SetText(roleIcon(entry.role))
+            row.roleFS:SetText(roleIcon(entry.role, 20))
             local w = SplitW:GetWeight(entry.name) or (SplitW:GetDB().weightDefault or 50)
             row.slider:SetValue(w)
             row.valFS:SetText(tostring(w))
@@ -665,10 +667,16 @@ local function buildWeightsPage(parent)
         populate()
     end, L["Re-read the raid roster from Blizzard's API."])
 
-    local testBtn = makeButton(parent, L["Toggle test mode"], 350, -428, 160, function()
+    local function testLabel()
+        return SplitW.Roster:IsTestMode() and L["Disable test mode"] or L["Enable test mode"]
+    end
+    local testBtn = makeButton(parent, testLabel(), 350, -428, 160, function() end,
+        L["Use a simulated 20-man roster for UI testing."])
+    testBtn:SetScript("OnClick", function()
         SplitW.Roster:SetTestMode(not SplitW.Roster:IsTestMode())
+        testBtn:SetText(testLabel())
         populate()
-    end, L["Use a simulated 20-man roster for UI testing."])
+    end)
 
     parent.refresh = populate
     populate()
@@ -695,13 +703,20 @@ local function buildPreviewPage(parent)
         end
     end, L["Move every player to their assigned subgroup. Requires leader or assistant."])
 
-    -- Test-mode toggle (discoverable here too, not just on Weights page).
-    local testBtn = makeButton(parent, L["Toggle test mode"], 342, -38, 180, function()
+    -- Test-mode toggle — label flips between Enable/Disable based on state.
+    local function testLabel()
+        return SplitW.Roster:IsTestMode() and L["Disable test mode"] or L["Enable test mode"]
+    end
+    local testBtn = makeButton(parent, testLabel(), 342, -38, 180, function() end,
+        L["Use a simulated 20-man roster for UI testing."])
+    testBtn:SetScript("OnClick", function()
         SplitW.Roster:SetTestMode(not SplitW.Roster:IsTestMode())
+        testBtn:SetText(testLabel())
         local r = SplitW.Roster:Scan()
         SplitW:GetDB().lastSplit = SplitW.Splitter:Compute(r)
         if parent.refresh then parent.refresh() end
-    end, L["Use a simulated 20-man roster for UI testing."])
+    end)
+    parent._testBtnRefresh = function() testBtn:SetText(testLabel()) end
 
     local modeFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     modeFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -68)
@@ -742,6 +757,14 @@ local function buildPreviewPage(parent)
     local titleA, listA = makeTeamColumn(L["Team A"], 14)
     local titleB, listB = makeTeamColumn(L["Team B"], 360)
 
+    -- Vertical separator between the two team columns (gold gradient).
+    local sep = parent:CreateTexture(nil, "ARTWORK")
+    sep:SetPoint("TOPLEFT",    parent, "TOPLEFT", 340, -200)
+    sep:SetPoint("BOTTOMLEFT", parent, "TOPLEFT", 340, -450)
+    sep:SetWidth(1)
+    sep:SetColorTexture(1, 0.82, 0, 0.5)
+    _registerInSection(sep)
+
     -- Warnings — placed below the team columns at a fixed Y. With the outer
     -- page ScrollFrame, this is fine even if team lists for a 30-man push it
     -- below the viewport (user scrolls). A BOTTOMLEFT anchor would track
@@ -779,6 +802,7 @@ local function buildPreviewPage(parent)
     end
 
     parent.refresh = function()
+        if parent._testBtnRefresh then parent._testBtnRefresh() end
         local roster = SplitW.Roster:Scan()
         if SplitW.Roster:IsTestMode() then
             modeFS:SetText("|cffffd100" .. L["Test mode ON (20 simulated)"] .. "|r")
@@ -1047,21 +1071,26 @@ local function build()
 
         builder(content)
 
-        -- After widgets are built, size the content frame so it covers the
-        -- bottom of the lowest registered section. Deferred so anchors resolve.
+        -- After widgets are built, size the content frame: at least as tall
+        -- as the viewport (so the page fills the available area cleanly), and
+        -- taller only when the lowest section actually extends past it.
+        -- Without this, content height stays at the initial 800 → the outer
+        -- scrollbar shows even when nothing overflows.
         C_Timer.After(0.05, function()
             local secs = _allSectionsOnPage[content]
-            if not secs then return end
-            local lowest = content:GetTop() or 0
-            for _, s in ipairs(secs) do
-                if s.container and s.container.GetBottom then
-                    local b = s.container:GetBottom()
-                    if b and b < lowest then lowest = b end
+            local top = content:GetTop() or 0
+            local lowest = top
+            if secs then
+                for _, s in ipairs(secs) do
+                    if s.container and s.container.GetBottom then
+                        local b = s.container:GetBottom()
+                        if b and b < lowest then lowest = b end
+                    end
                 end
             end
-            local top = content:GetTop() or 0
-            local span = math.max(800, top - lowest + 24)
-            content:SetHeight(span)
+            local viewport = sf:GetHeight() or 400
+            local natural  = top - lowest + 24
+            content:SetHeight(math.max(viewport, natural))
         end)
 
         pages[name] = sf
@@ -1076,7 +1105,7 @@ local function build()
     -- Bottom tabs
     local tabDefs = {
         { id = "setup",   label = L["Setup"]   },
-        { id = "weights", label = L["Weights"] },
+        { id = "weights", label = L["Players"] },
         { id = "preview", label = L["Preview"] },
         { id = "about",   label = L["About"]   },
     }
