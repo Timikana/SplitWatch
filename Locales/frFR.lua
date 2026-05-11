@@ -134,3 +134,5 @@ L["Source preview"] = "Aperçu de la source"
 L["Live values read from the selected source for the current (or test) roster."] =
     "Valeurs lues en direct depuis la source sélectionnée, pour le roster actuel (ou test)."
 L["No roster — enable test mode or join a raid."] = "Pas de roster — active le mode test ou rejoins un raid."
+L["Click to collapse/expand this section."] = "Clic pour réduire/déplier cette section."
+L["Reset this section to default values."] = "Réinitialise cette section aux valeurs par défaut."

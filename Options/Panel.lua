@@ -10,6 +10,27 @@ local pageHolder
 local selectTab
 local refresh
 
+-- Currently-being-built section: widget factories push themselves into it so
+-- collapse/reset operate on the right list. Reset via makeSection() at top of
+-- each page section.
+local _currentSection = nil
+
+local function _registerInSection(widget, dbKey)
+    if not _currentSection or not widget then return end
+    _currentSection.children[#_currentSection.children + 1] = widget
+    if dbKey then
+        _currentSection.dbKeys[#_currentSection.dbKeys + 1] = dbKey
+    end
+    if _currentSection._collapsed and widget.Hide then widget:Hide() end
+end
+
+local function _cloneDefault(v)
+    if type(v) ~= "table" then return v end
+    local out = {}
+    for k, val in pairs(v) do out[k] = _cloneDefault(val) end
+    return out
+end
+
 local CLASS_COLORS = (_G.RAID_CLASS_COLORS) or {}
 
 -- ============================================================
@@ -85,6 +106,7 @@ local function makeCheck(parent, label, key, x, y, tip)
         if refresh then refresh() end
     end)
     if tip then addTooltip(cb, tip) end
+    _registerInSection(cb, key)
     return cb
 end
 
@@ -115,6 +137,7 @@ local function makeSlider(parent, label, key, minV, maxV, step, x, y, width, tip
     end, sl)
     sl.refresh = function() sl:Init(readDB(), minV, maxV, numSteps, formatters) end
     if tip then addTooltip(sl, tip) end
+    _registerInSection(sl, key)
     return sl
 end
 
@@ -138,6 +161,8 @@ local function makeDropdown(parent, label, key, options, x, y, width, tip)
     end)
     dd.refresh = function() dd:GenerateMenu() end
     if tip then addTooltip(dd, tip) end
+    _registerInSection(dd, key)
+    _registerInSection(labelFS)
     return dd
 end
 
@@ -148,25 +173,121 @@ local function makeButton(parent, label, x, y, width, onClick, tip)
     b:SetText(label)
     b:SetScript("OnClick", onClick)
     if tip then addTooltip(b, tip) end
+    _registerInSection(b)
     return b
 end
 
-local function makeHeader(parent, text, x, y)
-    local h = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    h:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-    h:SetText(text)
-    h:SetTextColor(1, 0.82, 0)
+-- makeHeader is now a thin wrapper around makeSection so existing absolute-positioned
+-- page builders keep working. Each section gets: header text + horizontal gold line,
+-- chevron (click to collapse/expand its registered widgets), and a reset button (resets
+-- the registered dbKeys to Defaults).
+local TEX_EXPANDED  = "Interface\\Buttons\\UI-MinusButton-Up"
+local TEX_COLLAPSED = "Interface\\Buttons\\UI-PlusButton-Up"
+
+local function makeSection(parent, title, x, y, key, width)
+    width = width or 640
+    SplitWatchDB = SplitWatchDB or {}
+    SplitWatchDB.collapsedSections = SplitWatchDB.collapsedSections or {}
+
+    local section = {
+        children = {},
+        dbKeys   = {},
+        key      = key,
+        parent   = parent,
+        _origin  = y,
+    }
+
+    local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    header:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+    header:SetText(title)
+    header:SetTextColor(1, 0.82, 0)
+    section.header = header
+
+    local chevron = parent:CreateTexture(nil, "OVERLAY")
+    chevron:SetSize(14, 14)
+    chevron:SetPoint("LEFT", header, "RIGHT", 4, -1)
+    chevron:SetTexture(TEX_EXPANDED)
+    section.chevron = chevron
+
+    -- Click area: header text + chevron (collapse/expand)
+    local clickArea = CreateFrame("Button", nil, parent)
+    clickArea:SetPoint("TOPLEFT", parent, "TOPLEFT", x - 4, y + 4)
+    clickArea:SetSize((header:GetStringWidth() or 100) + 30, 20)
+    -- Re-fit click area after Blizzard finishes measuring the FontString
+    C_Timer.After(0, function()
+        clickArea:SetSize((header:GetStringWidth() or 100) + 30, 20)
+    end)
+    clickArea:RegisterForClicks("LeftButtonUp")
+    section.clickArea = clickArea
+
+    -- Reset button at the right edge (per-section reset of dbKeys to Defaults)
+    local btnReset = CreateFrame("Button", nil, parent)
+    btnReset:SetSize(14, 14)
+    btnReset:SetPoint("TOPLEFT", parent, "TOPLEFT", x + width - 18, y - 2)
+    btnReset:SetNormalTexture("Interface\\Buttons\\UI-RefreshButton")
+    btnReset:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+    section.resetBtn = btnReset
+
     local line = parent:CreateTexture(nil, "ARTWORK")
-    line:SetPoint("TOPLEFT", h, "BOTTOMLEFT", 0, -3)
-    line:SetSize(640, 1)
+    line:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -3)
+    line:SetSize(width - 4, 1)
     line:SetColorTexture(1, 0.82, 0, 0.35)
-    return h
+    section.line = line
+
+    function section:SetCollapsed(state, persist)
+        state = state and true or false
+        for _, w in ipairs(self.children) do
+            if state then if w.Hide then w:Hide() end
+            else if w.Show then w:Show() end end
+        end
+        chevron:SetTexture(state and TEX_COLLAPSED or TEX_EXPANDED)
+        if persist and self.key then
+            SplitWatchDB.collapsedSections[self.key] = state or nil
+        end
+        self._collapsed = state
+    end
+
+    function section:Toggle()
+        self:SetCollapsed(not self._collapsed, true)
+    end
+
+    function section:ResetToDefaults()
+        local db = SplitW:GetDB()
+        for _, k in ipairs(self.dbKeys) do
+            local def = SplitW.Defaults and SplitW.Defaults[k]
+            if def ~= nil then db[k] = _cloneDefault(def) end
+        end
+        if SplitW.RefreshAll then SplitW:RefreshAll() end
+        if panel and panel.refreshAll then panel.refreshAll() end
+    end
+
+    clickArea:SetScript("OnClick", function() section:Toggle() end)
+    btnReset:SetScript("OnClick", function() section:ResetToDefaults() end)
+
+    addTooltip(clickArea, L["Click to collapse/expand this section."])
+    addTooltip(btnReset,  L["Reset this section to default values."])
+
+    -- Restore persisted collapsed state
+    local restored = key and SplitWatchDB.collapsedSections[key]
+    section:SetCollapsed(restored or false, false)
+
+    _currentSection = section
+    return section
+end
+
+-- Backwards-compat shim: existing code calling makeHeader(parent, text, x, y)
+-- gets a section with no key (no persistence, no reset registry) so we can roll
+-- it out gradually. Pages that want reset+collapse pass a key by calling
+-- makeSection directly.
+local function makeHeader(parent, text, x, y)
+    return makeSection(parent, text, x, y, nil)
 end
 
 local function makeLabel(parent, text, x, y, font)
     local fs = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlight")
     fs:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
     fs:SetText(text)
+    _registerInSection(fs)
     return fs
 end
 
@@ -175,7 +296,7 @@ end
 -- ============================================================
 
 local function buildSetupPage(parent)
-    makeHeader(parent, L["General"], 14, -8)
+    makeSection(parent, L["General"], 14, -8, "setup.general", 420)
     local mm = makeCheck(parent, L["Show minimap icon"], "minimapHidden",
         14, -40, L["Toggle the minimap launcher button"])
     -- minimapHidden is inverted: checkbox checked = icon visible.
@@ -193,7 +314,7 @@ local function buildSetupPage(parent)
         14, -124, L["Recompute weights from the DPS source every time combat ends"]),
         "autoRefresh")
 
-    makeHeader(parent, L["DPS source"], 14, -160)
+    makeSection(parent, L["DPS source"], 14, -160, "setup.dps_source", 420)
     local sources = {
         { text = L["Built-in (combat log)"],      value = "BUILTIN" },
         { text = "Details!",                       value = "DETAILS" },
@@ -212,7 +333,7 @@ local function buildSetupPage(parent)
     statusFS:refresh()
 
     -- ---- Source preview (live read of DPS+HPS for the current roster) ----
-    makeHeader(parent, L["Source preview"], 14, -250)
+    makeSection(parent, L["Source preview"], 14, -250, "setup.source_preview", 640)
     local hintFS = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     hintFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -274)
     hintFS:SetWidth(640); hintFS:SetJustifyH("LEFT")
@@ -297,7 +418,7 @@ local function buildSetupPage(parent)
         if ticker then ticker:Cancel(); ticker = nil end
     end)
 
-    makeHeader(parent, L["Permission status"], 360, -250)
+    makeSection(parent, L["Permission status"], 360, -250, "setup.permissions", 300)
     local permFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     permFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -278)
     permFS:SetWidth(300); permFS:SetJustifyH("LEFT")
@@ -310,26 +431,6 @@ local function buildSetupPage(parent)
         end
     end
     permFS:refresh()
-
-    -- Panel opacity slider (account-wide, like BossWatch)
-    makeHeader(parent, L["Panel"], 360, -8)
-    local alphaSlider = CreateFrame("Frame", nil, parent, "MinimalSliderWithSteppersTemplate")
-    alphaSlider:SetWidth(220)
-    alphaSlider:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -50)
-    local function fmtPct(v) return math.floor(v * 100 + 0.5) .. "%" end
-    local alphaFormatters = {
-        [MinimalSliderWithSteppersMixin.Label.Min] = function() return "20%" end,
-        [MinimalSliderWithSteppersMixin.Label.Max] = function() return "100%" end,
-        [MinimalSliderWithSteppersMixin.Label.Top] = function(v) return L["Panel opacity"] .. ": " .. fmtPct(v) end,
-    }
-    SplitWatchDB.panelAlpha = SplitWatchDB.panelAlpha or 0.85
-    alphaSlider:Init(SplitWatchDB.panelAlpha, 0.2, 1.0, 16, alphaFormatters)
-    alphaSlider:RegisterCallback(MinimalSliderWithSteppersMixin.Event.OnValueChanged, function(_, v)
-        v = math.floor(v * 100 + 0.5) / 100
-        SplitWatchDB.panelAlpha = v
-        if panel then panel:SetAlpha(v) end
-    end, alphaSlider)
-    addTooltip(alphaSlider, L["Opacity of this options window. Saved account-wide."])
 
     -- Classic banner
     if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE and WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE then
@@ -350,7 +451,7 @@ end
 -- WEIGHTS PAGE
 -- ----------------------------------------------------------------
 local function buildWeightsPage(parent)
-    makeHeader(parent, L["Manual weights"], 14, -8)
+    makeSection(parent, L["Manual weights"], 14, -8, "weights.main", 640)
     local hint = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     hint:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -32)
     hint:SetWidth(640); hint:SetJustifyH("LEFT")
@@ -463,7 +564,7 @@ end
 -- PREVIEW PAGE (before/after with HPS/DPS counts)
 -- ----------------------------------------------------------------
 local function buildPreviewPage(parent)
-    makeHeader(parent, L["Preview the split"], 14, -8)
+    makeSection(parent, L["Preview the split"], 14, -8, "preview.main", 640)
 
     -- Top button bar
     local computeBtn = makeButton(parent, L["Compute split"], 14, -38, 160, function()
@@ -489,28 +590,29 @@ local function buildPreviewPage(parent)
     end, L["Use a simulated 20-man roster for UI testing."])
 
     local modeFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    modeFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 528, -44)
+    modeFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -68)
+    modeFS:SetWidth(640); modeFS:SetJustifyH("LEFT")
 
     -- BEFORE / AFTER label. Use a Blizzard texture inline for the arrow because
     -- the FRIZQT__ font doesn't include U+2192 → and renders it as an empty box.
     local ARROW_TEX = "|TInterface\\Buttons\\UI-SpellbookIcon-NextPage-Up:18:18:0:0|t"
-    local beforeFS = makeLabel(parent, "|cffaaaaaa" .. L["Before"] .. "|r", 14, -78, "GameFontNormalLarge")
-    local arrowFS  = makeLabel(parent, ARROW_TEX, 326, -80, "GameFontNormalLarge")
-    local afterFS  = makeLabel(parent, "|cffffd100" .. L["After"] .. "|r", 360, -78, "GameFontNormalLarge")
+    local beforeFS = makeLabel(parent, "|cffaaaaaa" .. L["Before"] .. "|r", 14, -92, "GameFontNormalLarge")
+    local arrowFS  = makeLabel(parent, ARROW_TEX, 326, -94, "GameFontNormalLarge")
+    local afterFS  = makeLabel(parent, "|cffffd100" .. L["After"] .. "|r", 360, -92, "GameFontNormalLarge")
 
     -- Stats lines
     local beforeStatsFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    beforeStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -104)
+    beforeStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -118)
     beforeStatsFS:SetWidth(300); beforeStatsFS:SetJustifyH("LEFT")
 
     local afterStatsFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    afterStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -104)
+    afterStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -118)
     afterStatsFS:SetWidth(300); afterStatsFS:SetJustifyH("LEFT")
 
     -- Team A / Team B columns (after split)
     local function makeTeamColumn(title, x)
         local titleFS = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-        titleFS:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -180)
+        titleFS:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -200)
         titleFS:SetText(title)
         titleFS:SetTextColor(1, 0.82, 0)
         local listFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -629,16 +731,36 @@ StaticPopupDialogs["SPLITWATCH_CONFIRM_APPLY"] = {
 -- ABOUT + CHANGELOG PAGE
 -- ----------------------------------------------------------------
 local function buildAboutPage(parent)
-    makeHeader(parent, L["About SplitWatch"], 14, -8)
+    makeSection(parent, L["About SplitWatch"], 14, -8, "about.info", 420)
     local v = C_AddOns and C_AddOns.GetAddOnMetadata(addonName, "Version") or "?"
     local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     fs:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -40)
-    fs:SetWidth(640); fs:SetJustifyH("LEFT")
+    fs:SetWidth(420); fs:SetJustifyH("LEFT")
     fs:SetText(format(
         L["SplitWatch v%s — auto-split a 20-man raid into 2 balanced teams.\nAuthor: Timikana\nSlash command: |cffffff00/splitw|r\nSister addons: BossWatch + TankWatch.\n"],
         v))
 
-    makeHeader(parent, L["Changelog"], 14, -160)
+    -- Panel opacity slider (account-wide preference)
+    makeSection(parent, L["Panel"], 450, -8, "about.panel", 200)
+    local alphaSlider = CreateFrame("Frame", nil, parent, "MinimalSliderWithSteppersTemplate")
+    alphaSlider:SetWidth(220)
+    alphaSlider:SetPoint("TOPLEFT", parent, "TOPLEFT", 450, -50)
+    local function fmtPct(v2) return math.floor(v2 * 100 + 0.5) .. "%" end
+    local alphaFormatters = {
+        [MinimalSliderWithSteppersMixin.Label.Min] = function() return "20%" end,
+        [MinimalSliderWithSteppersMixin.Label.Max] = function() return "100%" end,
+        [MinimalSliderWithSteppersMixin.Label.Top] = function(v2) return L["Panel opacity"] .. ": " .. fmtPct(v2) end,
+    }
+    SplitWatchDB.panelAlpha = SplitWatchDB.panelAlpha or 0.85
+    alphaSlider:Init(SplitWatchDB.panelAlpha, 0.2, 1.0, 16, alphaFormatters)
+    alphaSlider:RegisterCallback(MinimalSliderWithSteppersMixin.Event.OnValueChanged, function(_, v2)
+        v2 = math.floor(v2 * 100 + 0.5) / 100
+        SplitWatchDB.panelAlpha = v2
+        if panel then panel:SetAlpha(v2) end
+    end, alphaSlider)
+    addTooltip(alphaSlider, L["Opacity of this options window. Saved account-wide."])
+
+    makeSection(parent, L["Changelog"], 14, -160, "about.changelog", 640)
     local entries = {
         { ver = "0.1.0", date = "2026-05-11", lines = {
             L["• Initial release: manual weight mode, snake-distribution algorithm, preview pane with before/after stats, permission-gated Apply via SetRaidSubgroup."],
