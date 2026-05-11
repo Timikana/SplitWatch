@@ -178,7 +178,7 @@ local function makeSlider(parent, label, key, minV, maxV, step, x, y, width, tip
     return sl
 end
 
-local function makeDropdown(parent, label, key, options, x, y, width, tip)
+local function makeDropdown(parent, label, key, options, x, y, width, tip, availabilityFn)
     local dd = CreateFrame("DropdownButton", "SWOpt_DD_"..key, parent, "WowStyle1DropdownTemplate")
     dd:SetWidth(width or 180)
     dd:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y - 16)
@@ -188,12 +188,19 @@ local function makeDropdown(parent, label, key, options, x, y, width, tip)
     labelFS:SetText(label)
     dd:SetupMenu(function(_, root)
         for _, opt in ipairs(options) do
-            root:CreateRadio(opt.text,
+            local available = (not availabilityFn) or availabilityFn(opt.value)
+            local text = available and opt.text
+                or (opt.text .. "  |cff888888(" .. L["not installed"] .. ")|r")
+            local radio = root:CreateRadio(text,
                 function() return SplitW:GetDB()[key] == opt.value end,
                 function()
+                    if not available then return end
                     SplitW:GetDB()[key] = opt.value
                     if refresh then refresh() end
                 end)
+            if not available and radio and radio.SetEnabled then
+                radio:SetEnabled(false)
+            end
         end
     end)
     dd.refresh = function() dd:GenerateMenu() end
@@ -418,7 +425,8 @@ local function buildSetupPage(parent)
     }
     makeDropdown(parent, L["Pick the data source for DPS / HPS"], "dpsSource",
         sources, 14, -195, 220,
-        L["Details!/Recount/Skada read live DPS+HPS from those addons when loaded. Manual uses the per-player sliders on the Weights tab."])
+        L["Details!/Recount/Skada read live DPS+HPS from those addons when loaded. Manual uses the per-player sliders on the Weights tab."],
+        function(v) return SplitW.DPSSource and SplitW.DPSSource:IsAvailable(v) end)
 
     local statusFS = makeLabel(parent, "", 260, -211)
     statusFS.refresh = function()

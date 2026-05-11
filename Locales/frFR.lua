@@ -9,6 +9,7 @@ L["Preview"]  = "Aperçu"
 L["About"]    = "À propos"
 L["Enable test mode"]  = "Activer le mode test"
 L["Disable test mode"] = "Désactiver le mode test"
+L["not installed"] = "non installé"
 
 -- General
 L["General"] = "Général"
