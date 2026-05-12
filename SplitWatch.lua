@@ -487,6 +487,11 @@ init:RegisterEvent("GROUP_ROSTER_UPDATE")
 init:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
         SplitW:GetDB()
+        -- lastSplit (proposed) is runtime state — wipe any value persisted
+        -- from a previous session (otherwise stale test-roster splits would
+        -- render after /reload while Roster._testMode is back to its file-
+        -- load default of false, giving the impression test mode is on).
+        SplitW:GetDB().lastSplit = nil
         if SplitW.RegisterMinimapIcon then SplitW:RegisterMinimapIcon() end
         if SplitW.RegisterBlizzardSettings then SplitW:RegisterBlizzardSettings() end
         local v = C_AddOns and C_AddOns.GetAddOnMetadata(addonName, "Version") or "?"
