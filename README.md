@@ -12,6 +12,10 @@
 
 ---
 
+> [!WARNING]
+> **For best results, install [Details!](https://www.curseforge.com/wow/addons/details), [Recount](https://www.curseforge.com/wow/addons/recount), or [Skada](https://www.curseforge.com/wow/addons/skada).**
+> Without one of these damage meters loaded, SplitWatch can't read live DPS / HPS — the algorithm falls back to the per-player Manual sliders (default weight 50). The split still works, but it won't account for who actually pumps in your raid. **Details! is recommended.**
+
 ## What it does
 
 SplitWatch reads your raid roster, runs a snake-distribution algorithm balanced across **tanks, healers (by HPS) and DPS (by damage)**, and reassigns subgroups in one click via `SetRaidSubgroup`. Made for split-mechanic boss fights — Spirit Kings (MoP), and any other encounter that asks the raid to fight as two halves.
