@@ -460,9 +460,100 @@ local function buildSetupPage(parent)
     -- makeLabel already registered statusFS — but only since the recent factory change.
     -- Defensive: re-register isn't needed.
 
-    makeSection(parent, L["Permission status"], 14, -340, "setup.permissions")
+    -- ---- Live source preview (read-only check that the picker is wired) ----
+    makeSection(parent, L["Source preview"], 14, -340, "setup.source_preview")
+    local hintFS = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    hintFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -364)
+    hintFS:SetWidth(600); hintFS:SetJustifyH("LEFT")
+    hintFS:SetText(L["Live values read from the selected source — use this to confirm your damage meter is feeding data before you compute a split."])
+    _registerInSection(hintFS)
+
+    local previewScroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
+    previewScroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -382)
+    previewScroll:SetSize(600, 110)
+    local previewContent = CreateFrame("Frame", nil, previewScroll)
+    previewContent:SetSize(580, 1)
+    previewScroll:SetScrollChild(previewContent)
+    _registerInSection(previewScroll)
+    local previewRows, previewEmpty = {}, nil
+
+    local function refreshPreview()
+        local roster = SplitW.Roster:Scan()
+        local list, fromSource = {}, false
+        for _, e in ipairs(roster.tanks)   do table.insert(list, e) end
+        for _, e in ipairs(roster.healers) do table.insert(list, e) end
+        for _, e in ipairs(roster.dps)     do table.insert(list, e) end
+        if #list == 0 and SplitW.DPSSource and SplitW.DPSSource.ListActors then
+            for _, a in ipairs(SplitW.DPSSource:ListActors()) do
+                if type(a.name) == "string" and a.name ~= "" then
+                    table.insert(list, { name = a.name, class = a.class,
+                                         role = "DAMAGER", _sourceDps = a.dps, _sourceHps = a.hps })
+                end
+            end
+            fromSource = true
+        end
+        for i, entry in ipairs(list) do
+            local row = previewRows[i]
+            if not row then
+                row = CreateFrame("Frame", nil, previewContent)
+                row:SetSize(580, 18)
+                row:SetPoint("TOPLEFT", previewContent, "TOPLEFT", 0, -(i - 1) * 18)
+                row.roleFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                row.roleFS:SetPoint("LEFT", row, "LEFT", 0, 0)
+                row.roleFS:SetWidth(20); row.roleFS:SetJustifyH("CENTER")
+                row.nameFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                row.nameFS:SetPoint("LEFT", row.roleFS, "RIGHT", 4, 0)
+                row.nameFS:SetWidth(180); row.nameFS:SetJustifyH("LEFT")
+                row.dpsFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                row.dpsFS:SetPoint("LEFT", row.nameFS, "RIGHT", 8, 0)
+                row.dpsFS:SetWidth(140); row.dpsFS:SetJustifyH("LEFT")
+                row.hpsFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                row.hpsFS:SetPoint("LEFT", row.dpsFS, "RIGHT", 8, 0)
+                row.hpsFS:SetWidth(140); row.hpsFS:SetJustifyH("LEFT")
+                previewRows[i] = row
+            end
+            row.roleFS:SetText(fromSource and "" or roleIcon(entry.role))
+            local r, g, b = classColor(entry.class)
+            row.nameFS:SetText(entry.name or "?")
+            row.nameFS:SetTextColor(r, g, b)
+            local dps = entry._sourceDps or (SplitW.DPSSource and SplitW.DPSSource:GetDPS(entry.name))
+            local hps = entry._sourceHps or (SplitW.DPSSource and SplitW.DPSSource:GetHPS(entry.name))
+            row.dpsFS:SetText("|cffaaaaaaDPS:|r " .. fmtNum(dps))
+            row.hpsFS:SetText("|cffaaaaaaHPS:|r " .. fmtNum(hps))
+            row:Show()
+        end
+        for i = #list + 1, #previewRows do previewRows[i]:Hide() end
+        previewContent:SetHeight(math.max(1, #list * 18 + 4))
+        if #list == 0 then
+            previewEmpty = previewEmpty or previewContent:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+            previewEmpty:SetPoint("TOPLEFT", previewContent, "TOPLEFT", 14, -8)
+            previewEmpty:SetWidth(560); previewEmpty:SetJustifyH("LEFT")
+            previewEmpty:SetText(L["No data — join a raid, enable test mode, or fight something so the active source has actors to show."])
+            previewEmpty:Show()
+        elseif previewEmpty then
+            previewEmpty:Hide()
+        end
+    end
+    parent._refreshPreview = refreshPreview
+    refreshPreview()
+
+    -- Auto-refresh every 1.5s while the Réglages tab is shown.
+    local pageSF = parent:GetParent()
+    local ticker
+    if pageSF then
+        pageSF:HookScript("OnShow", function()
+            refreshPreview()
+            if ticker then ticker:Cancel() end
+            ticker = C_Timer.NewTicker(1.5, refreshPreview)
+        end)
+        pageSF:HookScript("OnHide", function()
+            if ticker then ticker:Cancel(); ticker = nil end
+        end)
+    end
+
+    makeSection(parent, L["Permission status"], 14, -520, "setup.permissions")
     local permFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    permFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -368)
+    permFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -548)
     permFS:SetWidth(600); permFS:SetJustifyH("LEFT")
     _registerInSection(permFS)
     permFS.refresh = function()
@@ -478,7 +569,7 @@ local function buildSetupPage(parent)
     -- Classic banner
     if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE and WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE then
         local banner = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        banner:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -420)
+        banner:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -600)
         banner:SetWidth(600); banner:SetJustifyH("LEFT")
         banner:SetText("|cffffd100" .. L["WARN_CLASSIC"] .. "|r")
     end
@@ -486,7 +577,8 @@ local function buildSetupPage(parent)
     parent.refresh = function()
         statusFS:refresh()
         permFS:refresh()
-        if parent._syncIlvlBtn then parent._syncIlvlBtn() end
+        if parent._syncIlvlBtn    then parent._syncIlvlBtn()    end
+        if parent._refreshPreview then parent._refreshPreview() end
     end
 end
 

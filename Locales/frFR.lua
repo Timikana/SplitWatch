@@ -225,6 +225,8 @@ L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tCouldn't fully b
 L["Source preview"] = "Aperçu de la source"
 L["Live values read from the selected source for the current (or test) roster."] =
     "Valeurs lues en direct depuis la source sélectionnée, pour le roster actuel (ou test)."
+L["Live values read from the selected source — use this to confirm your damage meter is feeding data before you compute a split."] =
+    "Valeurs lues en direct depuis la source sélectionnée — utilise-le pour confirmer que ton damage meter remonte bien des données avant de calculer un split."
 L["No roster — enable test mode or join a raid."] = "Pas de roster — active le mode test ou rejoins un raid."
 L["No data — join a raid, enable test mode, or fight something so the active source has actors to show."] =
     "Pas de données — rejoins un raid, active le mode test, ou tape sur quelque chose pour que la source active ait des acteurs à afficher."
