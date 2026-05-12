@@ -1276,12 +1276,20 @@ local function buildPreviewPage(parent)
     end
 
     -- Vertical separator between the two team columns (gold gradient).
+    -- Top fixed at the team-titles line; bottom is repositioned dynamically
+    -- in refresh to match the longest team's last row.
     local sep = parent:CreateTexture(nil, "ARTWORK")
     sep:SetPoint("TOPLEFT",    parent, "TOPLEFT", 340, -270)
     sep:SetPoint("BOTTOMLEFT", parent, "TOPLEFT", 340, -530)
     sep:SetWidth(1)
     sep:SetColorTexture(1, 0.82, 0, 0.5)
     _registerInSection(sep)
+    local function resizeSeparator(rowCount)
+        local bottomY = -(298 + rowCount * 20 + 10)
+        sep:ClearAllPoints()
+        sep:SetPoint("TOPLEFT",    parent, "TOPLEFT", 340, -270)
+        sep:SetPoint("BOTTOMLEFT", parent, "TOPLEFT", 340, bottomY)
+    end
 
     -- Warnings — placed below the team columns at a fixed Y. With the outer
     -- page ScrollFrame, this is fine even if team lists for a 30-man push it
@@ -1420,6 +1428,20 @@ local function buildPreviewPage(parent)
         if parent.GetHeight and parent:GetHeight() < needed then
             parent:SetHeight(needed)
         end
+
+        -- Anchor the warnings line BELOW the longest team column instead of a
+        -- fixed Y. Otherwise a 40-man split with 20 rows per team pushes the
+        -- last rows down to ~-680, far past the static y=-540 warnings line,
+        -- and the row text overlaps the warnings.
+        --   title top    : -270
+        --   first row    : -270 - 18 (title height) - 10 = -298
+        --   last row     : -298 - (rowCount - 1) * 20 - 20 (row height)
+        --              = -278 - rowCount * 20
+        --   warning at   : -298 - rowCount * 20 - 24 (margin)
+        local warnY = -(298 + rowCount * 20 + 24)
+        warnFS:ClearAllPoints()
+        warnFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, warnY)
+        resizeSeparator(rowCount)
 
         if #split.warnings > 0 then
             local out = {}
