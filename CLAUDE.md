@@ -144,10 +144,20 @@ Copy the profile system from BossWatch (`BossW:GetActiveProfileName`,
 `BossWatch.lua` lines 240-323 is generic — copy and rename prefix
 `BW1:` to `SW1:`.
 
-### Changelog tab
-A "Changelog" tab in the panel. Every release adds an entry to the top of
-the `entries` list inside `buildChangelogPage`, with FR translation. See
-BossWatch convention.
+### Changelog (in About tab + CHANGELOG.md sync)
+- The version history lives as a **SECTION at the bottom of the About tab**,
+  NOT as a separate tab. Pattern: `_BuildChangelogSection(parent)` called from
+  the end of `buildAboutPage` (see BossWatch Options/Panel.lua).
+- Maintain a single `CHANGELOG.md` at repo root (Keep a Changelog format).
+  No per-version `.changelog_v*.md` files — they were retired in v0.7.5.
+- Release pattern: rename `[Unreleased]` → `[X.Y.Z] - date`, add new
+  `[Unreleased]` on top. Then `scripts/extract_changelog.sh X.Y.Z` extracts
+  the block for `git tag -F` and Discord webhook.
+
+### Naming policy in changelog entries
+- ✅ Sister `*Watch` addons (BossWatch, TankWatch, SplitWatch) MAY be named.
+- ❌ Third-party addons (BigWigs, Plater, Details, Skada, etc.) must NOT
+  be named in user-facing entries. Describe the underlying change instead.
 
 ### Classic build banner
 If `WOW_PROJECT_ID and WOW_PROJECT_MAINLINE and WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE`,
