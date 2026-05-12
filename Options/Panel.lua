@@ -422,6 +422,19 @@ local function buildSetupPage(parent)
     markAsNew(makeCheck(parent, L["Auto-refresh after combat"], "autoRefresh",
         14, -124, L["Recompute weights from the DPS source every time combat ends"]),
         "autoRefresh")
+    markAsNew(makeCheck(parent, L["Broadcast team composition on Apply"], "broadcastOnApply",
+        360, -40, L["Post the team rosters to chat when a split is applied."]),
+        "broadcastOnApply")
+    local channels = {
+        { text = L["Raid chat"],          value = "RAID"          },
+        { text = L["Raid warning"],       value = "RAID_WARNING"  },
+        { text = L["Party chat"],         value = "PARTY"         },
+        { text = L["Say"],                value = "SAY"           },
+    }
+    markAsNew(makeDropdown(parent, L["Broadcast channel"], "broadcastChannel",
+        channels, 360, -90, 200,
+        L["Where to post the team-rosters message when Broadcast is enabled."]),
+        "broadcastChannel")
 
     makeSection(parent, L["DPS source"], 14, -160, "setup.dps_source")
     local sources = {
@@ -848,6 +861,7 @@ local function buildPreviewPage(parent)
         CONSTRAINT_UNSWAPPABLE_MR        = ICON .. L["Couldn't fully balance melee/ranged ratio."],
     }
 
+    local LOCK_ICON = "|TInterface\\PetBattles\\PetIcon-Mechanical:14:14:0:0:32:32:2:30:2:30|t"
     local function fmtTeam(team)
         if #team == 0 then return "|cff888888" .. L["(empty)"] .. "|r" end
         local src = SplitW:GetDB().dpsSource
@@ -865,10 +879,11 @@ local function buildPreviewPage(parent)
                     suffix = string.format("  |cffaaaaaa[%s]|r", fmtNum(v))
                 end
             end
-            lines[#lines + 1] = string.format("%s  |cff%02x%02x%02x%s|r%s",
+            local lockBadge = e.locked and (" " .. LOCK_ICON) or ""
+            lines[#lines + 1] = string.format("%s  |cff%02x%02x%02x%s|r%s%s",
                 roleIcon(e.role, 16),
                 math.floor(r*255), math.floor(g*255), math.floor(b*255),
-                e.name, suffix)
+                e.name, lockBadge, suffix)
         end
         return table.concat(lines, "\n")
     end

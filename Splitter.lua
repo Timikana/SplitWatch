@@ -74,10 +74,28 @@ function Splitter:Compute(roster)
     local healSumA, healSumB = 0, 0  -- healing scores
     local warnings = {}
 
-    -- Tanks: alternate (1→A, 2→B, 3→A, …). If exactly 1 tank → A.
-    for i, t in ipairs(roster.tanks) do
-        t.team = (i % 2 == 1) and "A" or "B"
-        if t.team == "A" then
+    -- Tag locked entries from the saved manual locks. Locked players get
+    -- placed on their pinned team first and are skipped by all later passes.
+    local locks = SplitW:GetDB().lockedTeams or {}
+    local function applyLockTag(list)
+        for _, e in ipairs(list) do
+            e.locked = locks[e.name] -- "A" / "B" / nil
+        end
+    end
+    applyLockTag(roster.tanks)
+    applyLockTag(roster.healers)
+    applyLockTag(roster.dps)
+
+    -- Tanks: respect lock first, otherwise alternate (1→A, 2→B, 3→A …).
+    local autoTankIdx = 0
+    for _, t in ipairs(roster.tanks) do
+        local target = t.locked
+        if not target then
+            autoTankIdx = autoTankIdx + 1
+            target = (autoTankIdx % 2 == 1) and "A" or "B"
+        end
+        t.team = target
+        if target == "A" then
             table.insert(A, t); tanksA = tanksA + 1
         else
             table.insert(B, t); tanksB = tanksB + 1
@@ -89,35 +107,60 @@ function Splitter:Compute(roster)
         table.insert(warnings, "NO_TANK")
     end
 
-    -- Healers: sort by HPS desc, snake-distribute on healSum (balances by raw
-    -- healing throughput so each team gets comparable healing power, not just
-    -- a matching healer count).
+    -- Healers: place locked first to seed the score totals, then snake the rest
+    -- by HPS desc.
     table.sort(roster.healers, function(x, y)
         return resolveHealWeight(x) > resolveHealWeight(y)
     end)
     for _, h in ipairs(roster.healers) do
-        local w = resolveHealWeight(h)
-        if healSumA <= healSumB then
-            h.team = "A"
-            table.insert(A, h); healsA = healsA + 1; healSumA = healSumA + w
-        else
-            h.team = "B"
-            table.insert(B, h); healsB = healsB + 1; healSumB = healSumB + w
+        if h.locked then
+            local w = resolveHealWeight(h)
+            h.team = h.locked
+            if h.locked == "A" then
+                table.insert(A, h); healsA = healsA + 1; healSumA = healSumA + w
+            else
+                table.insert(B, h); healsB = healsB + 1; healSumB = healSumB + w
+            end
+        end
+    end
+    for _, h in ipairs(roster.healers) do
+        if not h.locked then
+            local w = resolveHealWeight(h)
+            if healSumA <= healSumB then
+                h.team = "A"
+                table.insert(A, h); healsA = healsA + 1; healSumA = healSumA + w
+            else
+                h.team = "B"
+                table.insert(B, h); healsB = healsB + 1; healSumB = healSumB + w
+            end
         end
     end
 
-    -- DPS: sort by weight desc, then put each on the lighter team (greedy snake).
+    -- DPS: locked first (seed scores), then snake the rest by DPS desc.
     table.sort(roster.dps, function(x, y)
         return resolveDmgWeight(x) > resolveDmgWeight(y)
     end)
     for _, d in ipairs(roster.dps) do
-        local w = resolveDmgWeight(d)
-        if sumA <= sumB then
-            d.team = "A"
-            table.insert(A, d); dpsA = dpsA + 1; sumA = sumA + w
-        else
-            d.team = "B"
-            table.insert(B, d); dpsB = dpsB + 1; sumB = sumB + w
+        if d.locked then
+            local w = resolveDmgWeight(d)
+            d.team = d.locked
+            if d.locked == "A" then
+                table.insert(A, d); dpsA = dpsA + 1; sumA = sumA + w
+            else
+                table.insert(B, d); dpsB = dpsB + 1; sumB = sumB + w
+            end
+        end
+    end
+    for _, d in ipairs(roster.dps) do
+        if not d.locked then
+            local w = resolveDmgWeight(d)
+            if sumA <= sumB then
+                d.team = "A"
+                table.insert(A, d); dpsA = dpsA + 1; sumA = sumA + w
+            else
+                d.team = "B"
+                table.insert(B, d); dpsB = dpsB + 1; sumB = sumB + w
+            end
         end
     end
 
@@ -130,7 +173,7 @@ function Splitter:Compute(roster)
     local function _moveWeakestDps(fromTeam, fromIsA)
         for i = #fromTeam, 1, -1 do
             local e = fromTeam[i]
-            if e.role ~= "TANK" and e.role ~= "HEALER" then
+            if e.role ~= "TANK" and e.role ~= "HEALER" and not e.locked then
                 table.remove(fromTeam, i)
                 local w = resolveDmgWeight(e)
                 if fromIsA then
@@ -172,10 +215,12 @@ function Splitter:Compute(roster)
         local source       = hasA and A or B
         local bestI, bestJ, bestDelta
         for i, candidate in ipairs(source) do
-            if candidate.role == "DAMAGER" and constraint.classes[candidate.class] then
+            if candidate.role == "DAMAGER" and constraint.classes[candidate.class]
+               and not candidate.locked then
                 for j, target in ipairs(lacking) do
                     if target.role == "DAMAGER"
-                       and not constraint.classes[target.class] then
+                       and not constraint.classes[target.class]
+                       and not target.locked then
                         local wc = resolveDmgWeight(candidate)
                         local wt = resolveDmgWeight(target)
                         -- Score delta on `lacking`: gains wc, loses wt → +(wc-wt)
@@ -227,9 +272,9 @@ function Splitter:Compute(roster)
             -- Find a melee in source + a ranged in target with similar score.
             local bestI, bestJ, bestDelta
             for i, src in ipairs(fromTeam) do
-                if src.role == "DAMAGER" and entryRange(src) == "MELEE" then
+                if src.role == "DAMAGER" and entryRange(src) == "MELEE" and not src.locked then
                     for j, tgt in ipairs(toTeam) do
-                        if tgt.role == "DAMAGER" and entryRange(tgt) == "RANGED" then
+                        if tgt.role == "DAMAGER" and entryRange(tgt) == "RANGED" and not tgt.locked then
                             local ws, wt = resolveDmgWeight(src), resolveDmgWeight(tgt)
                             local delta = math.abs((sumA - sumB)
                                 + (fromIsA and (wt - ws) or (ws - wt)))

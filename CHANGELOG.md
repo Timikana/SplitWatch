@@ -6,6 +6,11 @@ versionnage selon [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+### Ajouté
+- **Verrouillages manuels** — épingle un joueur sur une équipe spécifique avant le calcul. L'algo place les verrouillés en premier puis snake-distribue les autres en respectant les locks à toutes les passes (rebalance, contraintes, melee/ranged). Commandes : `/splitw lock <nom> A|B|free` et `/splitw lock clear`. Icône 🔒 affichée à côté du nom dans les colonnes Aperçu.
+- **Annonce sur Apply** — option pour poster automatiquement la composition (Team A + Team B) dans un canal de chat après un Apply réussi. Canaux : `RAID`, `RAID_WARNING` (auto-fallback sur RAID si pas chef/assistant), `PARTY`, `SAY`. Toggle sur Réglages → Général.
+- **Presets nommés** — sauvegarde/charge des configurations complètes (contraintes + locks + source DPS). Commandes : `/splitw preset save|load|delete <nom>`, `/splitw preset list`.
+
 ## [0.2.0] - 2026-05-12
 
 ### Ajouté

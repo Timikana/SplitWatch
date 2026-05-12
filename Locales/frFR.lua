@@ -171,6 +171,33 @@ L["compute and show split preview"] = "calculer et afficher l'aperçu du split"
 L["apply the current split via SetRaidSubgroup"] = "appliquer le split actuel via SetRaidSubgroup"
 L["toggle simulated 20-man roster"] = "activer/désactiver le faux roster 20"
 L["reset all settings + reload"] = "tout réinitialiser + recharger l'UI"
+L["pin a player to a team"] = "verrouille un joueur sur une équipe"
+L["manage saved presets"] = "gérer les presets sauvegardés"
+L["preset saved: %s"] = "preset sauvegardé : %s"
+L["preset loaded: %s"] = "preset chargé : %s"
+L["preset deleted: %s"] = "preset supprimé : %s"
+L["preset not found"] = "preset introuvable"
+L["no presets saved"] = "aucun preset sauvegardé"
+L["presets:"] = "presets :"
+L["usage: /splitw preset save|load|delete <name> | list"] =
+    "usage : /splitw preset save|load|delete <nom> | list"
+L["locked %s → %s"] = "%s verrouillé sur l'équipe %s"
+L["unlocked %s"] = "%s déverrouillé"
+L["all locks cleared"] = "tous les verrouillages effacés"
+L["usage: /splitw lock <name> A|B|free  |  /splitw lock clear"] =
+    "usage : /splitw lock <nom> A|B|free  |  /splitw lock clear"
+
+-- Broadcast UI
+L["Broadcast team composition on Apply"] = "Annoncer la composition à l'Apply"
+L["Post the team rosters to chat when a split is applied."] =
+    "Poste la composition des équipes dans le chat quand un split est appliqué."
+L["Broadcast channel"] = "Canal d'annonce"
+L["Where to post the team-rosters message when Broadcast is enabled."] =
+    "Où poster le message de composition quand l'annonce est activée."
+L["Raid chat"]    = "Canal raid"
+L["Raid warning"] = "Avertissement raid"
+L["Party chat"]   = "Canal groupe"
+L["Say"]          = "Dire"
 L["test mode on (20 simulated members)"] = "mode test activé (20 membres simulés)"
 L["test mode off"] = "mode test désactivé"
 

@@ -29,11 +29,27 @@ Apply._queue = nil
 Apply._running = false
 Apply._waitingForCombat = false
 
+local function broadcastSplit()
+    local db = SplitW:GetDB()
+    if not db.broadcastOnApply then return end
+    local split = db.lastSplit
+    if not split then return end
+    local channel = db.broadcastChannel or "RAID"
+    if channel == "RAID_WARNING"
+       and not (UnitIsGroupLeader("player") or UnitIsGroupAssistant("player")) then
+        channel = "RAID"  -- raid warning requires lead/assist; fall back
+    end
+    local function fmt(team) local names = {}; for _, e in ipairs(team) do names[#names + 1] = e.name end; return table.concat(names, ", ") end
+    SendChatMessage("[SplitWatch] Team A: " .. fmt(split.teamA), channel)
+    SendChatMessage("[SplitWatch] Team B: " .. fmt(split.teamB), channel)
+end
+
 local function step()
     if not Apply._queue or #Apply._queue == 0 then
         Apply._running = false
         Apply._queue = nil
         print("|cffffd100SplitWatch:|r " .. L["split applied"])
+        broadcastSplit()
         if SplitW.RefreshAll then SplitW:RefreshAll() end
         return
     end

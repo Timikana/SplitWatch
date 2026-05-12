@@ -29,6 +29,17 @@ SplitW.Defaults = {
     constraintMassDisp  = false,  -- ≥1 Priest per team (Mass Dispel)
     constraintDecurse   = false,  -- ≥1 decurser per team (Mage/Druid/Shaman/Monk)
 
+    -- Manual locks: { ["PlayerName"] = "A" | "B" } — locked players are placed
+    -- on their team before snake distribution and excluded from all swaps.
+    lockedTeams         = {},
+
+    -- Broadcast: after a successful Apply, post the team rosters to chat.
+    broadcastOnApply    = false,
+    broadcastChannel    = "RAID",  -- RAID | RAID_WARNING | PARTY | SAY
+
+    -- Named presets: { ["Spirit Kings"] = { config = {...}, locks = {...} } }
+    presets             = {},
+
     -- Last computed split (preview cache)
     lastSplit     = nil,
 
@@ -189,6 +200,84 @@ function SplitW:GetEffectiveHPS(entry)
 end
 
 -- ============================================================
+-- LOCKS API — pin a player to a specific team before the split is computed.
+-- ============================================================
+function SplitW:GetLock(name)
+    if not name then return nil end
+    local locks = SplitW:GetDB().lockedTeams
+    return locks and locks[name]
+end
+
+function SplitW:SetLock(name, team)
+    if not name then return end
+    local db = SplitW:GetDB()
+    db.lockedTeams = db.lockedTeams or {}
+    if team == "A" or team == "B" then
+        db.lockedTeams[name] = team
+    else
+        db.lockedTeams[name] = nil
+    end
+end
+
+function SplitW:ClearLocks()
+    SplitW:GetDB().lockedTeams = {}
+end
+
+function SplitW:CountLocks()
+    local n = 0
+    for _ in pairs(SplitW:GetDB().lockedTeams or {}) do n = n + 1 end
+    return n
+end
+
+-- ============================================================
+-- PRESETS API — save/load named configurations (constraints + locks + source).
+-- ============================================================
+local PRESET_KEYS = {
+    "constraintBR", "constraintLust", "constraintMR",
+    "constraintMassDisp", "constraintDecurse",
+    "dpsSource",
+}
+
+function SplitW:SavePreset(name)
+    if not name or name == "" then return false, "missing name" end
+    local db = SplitW:GetDB()
+    db.presets = db.presets or {}
+    local snapshot = { config = {}, locks = {} }
+    for _, k in ipairs(PRESET_KEYS) do
+        snapshot.config[k] = db[k]
+    end
+    for k, v in pairs(db.lockedTeams or {}) do snapshot.locks[k] = v end
+    db.presets[name] = snapshot
+    return true
+end
+
+function SplitW:LoadPreset(name)
+    local db = SplitW:GetDB()
+    local p = db.presets and db.presets[name]
+    if not p then return false, "preset not found" end
+    for k, v in pairs(p.config or {}) do db[k] = v end
+    db.lockedTeams = {}
+    for k, v in pairs(p.locks or {}) do db.lockedTeams[k] = v end
+    return true
+end
+
+function SplitW:DeletePreset(name)
+    local db = SplitW:GetDB()
+    if db.presets and db.presets[name] then
+        db.presets[name] = nil
+        return true
+    end
+    return false
+end
+
+function SplitW:ListPresets()
+    local out = {}
+    for n in pairs(SplitW:GetDB().presets or {}) do out[#out + 1] = n end
+    table.sort(out)
+    return out
+end
+
+-- ============================================================
 -- SLASH COMMAND
 -- ============================================================
 SLASH_SPLITWATCH1 = "/splitw"
@@ -217,6 +306,48 @@ SlashCmdList["SPLITWATCH"] = function(msg)
         SplitW:GetDB().lastSplit = s
         if SplitW.RefreshAll then SplitW:RefreshAll() end
         print("|cffffd100SplitWatch:|r " .. (arg == "off" and L["test mode off"] or L["test mode on (20 simulated members)"]))
+    elseif cmd == "preset" then
+        local sub, rest = arg:match("^(%S+)%s*(.*)$")
+        if sub == "save" and rest and rest ~= "" then
+            if SplitW:SavePreset(rest) then
+                print("|cffffd100SplitWatch:|r " .. format(L["preset saved: %s"], rest))
+            end
+        elseif sub == "load" and rest and rest ~= "" then
+            local ok, err = SplitW:LoadPreset(rest)
+            if ok then
+                print("|cffffd100SplitWatch:|r " .. format(L["preset loaded: %s"], rest))
+                if SplitW.RefreshAll then SplitW:RefreshAll() end
+            else
+                print("|cffff5555SplitWatch:|r " .. (err or "?"))
+            end
+        elseif sub == "delete" and rest and rest ~= "" then
+            if SplitW:DeletePreset(rest) then
+                print("|cffffd100SplitWatch:|r " .. format(L["preset deleted: %s"], rest))
+            end
+        elseif sub == "list" or sub == nil or sub == "" then
+            local list = SplitW:ListPresets()
+            if #list == 0 then
+                print("|cffffd100SplitWatch:|r " .. L["no presets saved"])
+            else
+                print("|cffffd100SplitWatch:|r " .. L["presets:"] .. " " .. table.concat(list, ", "))
+            end
+        else
+            print("|cffffd100SplitWatch:|r " .. L["usage: /splitw preset save|load|delete <name> | list"])
+        end
+    elseif cmd == "lock" then
+        local subname, team = arg:match("^(%S+)%s*(.*)$")
+        if subname == "clear" then
+            SplitW:ClearLocks()
+            print("|cffffd100SplitWatch:|r " .. L["all locks cleared"])
+        elseif subname and (team == "A" or team == "B") then
+            SplitW:SetLock(subname, team)
+            print("|cffffd100SplitWatch:|r " .. format(L["locked %s → %s"], subname, team))
+        elseif subname and (team == "" or team == "free") then
+            SplitW:SetLock(subname, nil)
+            print("|cffffd100SplitWatch:|r " .. format(L["unlocked %s"], subname))
+        else
+            print("|cffffd100SplitWatch:|r " .. L["usage: /splitw lock <name> A|B|free  |  /splitw lock clear"])
+        end
     elseif cmd == "reset" then
         SplitWatchDB = nil
         ReloadUI()
@@ -226,6 +357,8 @@ SlashCmdList["SPLITWATCH"] = function(msg)
         print("  /splitw preview    - " .. L["compute and show split preview"])
         print("  /splitw apply      - " .. L["apply the current split via SetRaidSubgroup"])
         print("  /splitw test [off] - " .. L["toggle simulated 20-man roster"])
+        print("  /splitw lock <name> A|B|free  - " .. L["pin a player to a team"])
+        print("  /splitw preset save|load|delete <name> | list - " .. L["manage saved presets"])
         print("  /splitw reset      - " .. L["reset all settings + reload"])
     end
 end
