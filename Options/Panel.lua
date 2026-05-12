@@ -442,8 +442,8 @@ local function buildSetupPage(parent)
     end
     statusFS:refresh()
 
-    -- Refresh-ilvl button — kicks off an inspect sweep of the raid. Useful
-    -- mostly when the ILVL source is selected, but works any time.
+    -- Refresh-ilvl button — only active when the ILVL source is selected
+    -- (the inspect cache feeds only that source, no point scanning otherwise).
     local refreshIlvlBtn = makeButton(parent, L["Scan raid ilvl"], 260, -230, 140, function()
         if SplitW.DPSSource and SplitW.DPSSource.RefreshIlvl then
             SplitW.DPSSource:RefreshIlvl()
@@ -452,7 +452,11 @@ local function buildSetupPage(parent)
                 statusFS:refresh()
             end)
         end
-    end, L["Inspect every raid member to fetch their average item level. Each inspect is ~1.5s and limited to a 28-yard range."])
+    end, L["Inspect every raid member to fetch their average item level. Each inspect is ~1.5s and limited to a 28-yard range. Active only when the Item Level source is selected."])
+    parent._syncIlvlBtn = function()
+        refreshIlvlBtn:SetEnabled(SplitW:GetDB().dpsSource == "ILVL")
+    end
+    parent._syncIlvlBtn()
     -- makeLabel already registered statusFS — but only since the recent factory change.
     -- Defensive: re-register isn't needed.
 
@@ -581,6 +585,7 @@ local function buildSetupPage(parent)
     parent.refresh = function()
         statusFS:refresh()
         permFS:refresh()
+        if parent._syncIlvlBtn   then parent._syncIlvlBtn()   end
         if parent._refreshPreview then parent._refreshPreview() end
     end
 end
