@@ -160,6 +160,7 @@ L["Opacity of this options window. Saved account-wide."] = "Opacité de cette fe
 L["Test mode ON (20 simulated)"] = "Mode test ACTIF (20 simulés)"
 L["No raid detected — enable test mode to preview"] = "Pas de raid détecté — active le mode test pour visualiser"
 L["Live roster (%d members)"] = "Raid réel (%d membres)"
+L["Source used for the split:"] = "Source utilisée pour le calcul :"
 L["Source preview"] = "Aperçu de la source"
 L["Live values read from the selected source for the current (or test) roster."] =
     "Valeurs lues en direct depuis la source sélectionnée, pour le roster actuel (ou test)."

@@ -747,21 +747,28 @@ local function buildPreviewPage(parent)
     modeFS:SetWidth(600); modeFS:SetJustifyH("LEFT")
     _registerInSection(modeFS)
 
+    -- Which damage-meter source the algorithm is reading from. Visible on the
+    -- Preview page so you don't have to bounce to Réglages to check.
+    local srcFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    srcFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -86)
+    srcFS:SetWidth(600); srcFS:SetJustifyH("LEFT")
+    _registerInSection(srcFS)
+
     -- BEFORE / AFTER label. Use a Blizzard texture inline for the arrow because
     -- the FRIZQT__ font doesn't include U+2192 → and renders it as an empty box.
     local ARROW_TEX = "|TInterface\\Buttons\\UI-SpellbookIcon-NextPage-Up:18:18:0:0|t"
-    local beforeFS = makeLabel(parent, "|cffaaaaaa" .. L["Before"] .. "|r", 14, -92, "GameFontNormalLarge")
-    local arrowFS  = makeLabel(parent, ARROW_TEX, 326, -94, "GameFontNormalLarge")
-    local afterFS  = makeLabel(parent, "|cffffd100" .. L["After"] .. "|r", 360, -92, "GameFontNormalLarge")
+    local beforeFS = makeLabel(parent, "|cffaaaaaa" .. L["Before"] .. "|r", 14, -110, "GameFontNormalLarge")
+    local arrowFS  = makeLabel(parent, ARROW_TEX, 326, -112, "GameFontNormalLarge")
+    local afterFS  = makeLabel(parent, "|cffffd100" .. L["After"] .. "|r", 360, -110, "GameFontNormalLarge")
 
     -- Stats lines
     local beforeStatsFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    beforeStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -118)
+    beforeStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -136)
     beforeStatsFS:SetWidth(300); beforeStatsFS:SetJustifyH("LEFT")
     _registerInSection(beforeStatsFS)
 
     local afterStatsFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    afterStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -118)
+    afterStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -136)
     afterStatsFS:SetWidth(300); afterStatsFS:SetJustifyH("LEFT")
     _registerInSection(afterStatsFS)
 
@@ -844,6 +851,8 @@ local function buildPreviewPage(parent)
         else
             modeFS:SetText("|cff66ff66" .. format(L["Live roster (%d members)"], roster.raid) .. "|r")
         end
+        local srcLabel = SplitW.DPSSource and SplitW.DPSSource:ActiveSourceLabel() or "?"
+        srcFS:SetText("|cffaaaaaa" .. L["Source used for the split:"] .. "|r |cffffffff" .. srcLabel .. "|r")
         -- BEFORE stats: count current subgroup distribution.
         local beforeA, beforeB = 0, 0
         local bTA, bHA, bDA = 0, 0, 0
