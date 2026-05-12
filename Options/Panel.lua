@@ -1078,6 +1078,8 @@ local function build()
                        p.x or 0, p.y or 0)
     end
     restorePosition()
+    -- Close on Escape via Blizzard's special-frames list.
+    tinsert(UISpecialFrames, "SplitWatchOptionsPanel")
     panel:SetMovable(true)
     panel:SetClampedToScreen(true)
     panel:EnableMouse(true)
