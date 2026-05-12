@@ -1022,7 +1022,29 @@ local function buildPreviewPage(parent)
     -- Forward-declare so the menu callback can recompute.
     local recomputeAndRefresh
 
-    local function showLockMenu(entry)
+    local function showLockMenu(entry, ownerFrame)
+        -- Retail 12.x removed EasyMenu. Use the modern MenuUtil API when
+        -- available; fall back to UIDropDownMenu_Initialize on older clients
+        -- (Mists Classic 5.5 still ships the legacy dropdown helpers).
+        if MenuUtil and MenuUtil.CreateContextMenu then
+            MenuUtil.CreateContextMenu(ownerFrame or lockDropdown, function(_, root)
+                root:CreateTitle(entry.name)
+                local btnA = root:CreateButton(L["Lock to Team A"], function()
+                    SplitW:SetLock(entry.name, "A"); recomputeAndRefresh()
+                end)
+                if btnA and btnA.SetEnabled then btnA:SetEnabled(entry.locked ~= "A") end
+                local btnB = root:CreateButton(L["Lock to Team B"], function()
+                    SplitW:SetLock(entry.name, "B"); recomputeAndRefresh()
+                end)
+                if btnB and btnB.SetEnabled then btnB:SetEnabled(entry.locked ~= "B") end
+                local btnF = root:CreateButton(L["Free lock"], function()
+                    SplitW:SetLock(entry.name, nil); recomputeAndRefresh()
+                end)
+                if btnF and btnF.SetEnabled then btnF:SetEnabled(entry.locked ~= nil) end
+            end)
+            return
+        end
+        -- Legacy path
         local menu = {
             { text = entry.name, isTitle = true, notCheckable = true },
             { text = " ",        disabled = true, notCheckable = true },
@@ -1039,7 +1061,16 @@ local function buildPreviewPage(parent)
               notCheckable = true,
               disabled = not entry.locked },
         }
-        EasyMenu(menu, lockDropdown, "cursor", 0, 0, "MENU")
+        if UIDropDownMenu_Initialize and ToggleDropDownMenu then
+            UIDropDownMenu_Initialize(lockDropdown, function(self, level)
+                for _, item in ipairs(menu) do
+                    local info = UIDropDownMenu_CreateInfo()
+                    for k, v in pairs(item) do info[k] = v end
+                    UIDropDownMenu_AddButton(info, level)
+                end
+            end, "MENU")
+            ToggleDropDownMenu(1, nil, lockDropdown, "cursor", 0, 0)
+        end
     end
 
     local function showRowTooltip(self)
@@ -1133,7 +1164,7 @@ local function buildPreviewPage(parent)
                 end)
                 row:SetScript("OnMouseUp", function(self, button)
                     if button == "RightButton" then
-                        if self._entry then showLockMenu(self._entry) end
+                        if self._entry then showLockMenu(self._entry, self) end
                         return
                     end
                     if button == "LeftButton" then
