@@ -44,6 +44,10 @@ SplitW.Defaults = {
     -- expect their click to move only those two players.
     autoRebalanceAfterSwap = false,
 
+    -- Test-mode roster size (10-40). Roster:Scan slices the test pools to
+    -- this count using realistic tank/healer/DPS ratios.
+    testRosterSize         = 20,
+
     -- Named presets: { ["Spirit Kings"] = { config = {...}, locks = {...} } }
     presets             = {},
 

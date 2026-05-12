@@ -428,6 +428,10 @@ local function buildSetupPage(parent)
     markAsNew(makeCheck(parent, L["Auto-rebalance after manual swap"], "autoRebalanceAfterSwap",
         360, -120, L["When OFF (default), a 2-click manual swap on Aperçu only moves those two players. When ON, the algorithm recomputes the entire split with the swapped pair locked, redistributing everyone else."]),
         "autoRebalanceAfterSwap")
+    markAsNew(makeSlider(parent, L["Test roster size"], "testRosterSize",
+        10, 40, 1, 360, -180, 240,
+        L["Number of simulated players when test mode is on. Tank/healer/DPS ratios scale automatically (e.g. 10-man → 2T+2H+6DPS, 25-man → 2T+5H+18DPS, 40-man → 3T+9H+28DPS)."]),
+        "testRosterSize")
     local channels = {
         { text = L["Raid chat"],          value = "RAID"          },
         { text = L["Raid warning"],       value = "RAID_WARNING"  },
@@ -1338,7 +1342,7 @@ local function buildPreviewPage(parent)
         end
         local roster = SplitW.Roster:Scan()
         if SplitW.Roster:IsTestMode() then
-            modeFS:SetText("|cffffd100" .. L["Test mode ON (20 simulated)"] .. "|r")
+            modeFS:SetText("|cffffd100" .. format(L["Test mode ON (%d simulated)"], SplitW.Roster:GetTestSize()) .. "|r")
         elseif roster.raid == 0 then
             modeFS:SetText("|cffff8855" .. L["No raid detected — enable test mode to preview"] .. "|r")
         else
