@@ -12,9 +12,13 @@
 
 ---
 
-> [!WARNING]
-> **For best results, install [Details!](https://www.curseforge.com/wow/addons/details), [Recount](https://www.curseforge.com/wow/addons/recount), or [Skada](https://www.curseforge.com/wow/addons/skada).**
-> Without one of these damage meters loaded, SplitWatch can't read live DPS / HPS — the algorithm falls back to the per-player Manual sliders (default weight 50). The split still works, but it won't account for who actually pumps in your raid. **Details! is recommended.**
+> [!TIP]
+> **Sources de poids disponibles :**
+> - **Details! / Recount / Skada** — DPS + HPS live (le plus précis, recommandé)
+> - **Item Level (inspect)** — pas besoin d'addon tiers, utilise l'API Blizzard `NotifyInspect`. Inspecte chaque membre du raid (~1.5s par joueur, portée 28y)
+> - **Manuel** — sliders 1-100 par joueur sur l'onglet **Joueurs**
+>
+> Si aucun damage meter n'est chargé, le mode **Item Level** est un excellent fallback sans dépendance — il classe les joueurs par stuff plutôt que par performance, mais reste bien plus informatif que des poids manuels uniformes.
 
 ## What it does
 

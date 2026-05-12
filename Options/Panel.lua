@@ -421,11 +421,12 @@ local function buildSetupPage(parent)
         { text = "Details!",                       value = "DETAILS" },
         { text = "Recount",                        value = "RECOUNT" },
         { text = "Skada",                          value = "SKADA"   },
+        { text = L["Item Level (inspect)"],        value = "ILVL"    },
         { text = L["Manual (per-player slider)"], value = "MANUAL"  },
     }
     makeDropdown(parent, L["Pick the data source for DPS / HPS"], "dpsSource",
         sources, 14, -195, 220,
-        L["Details!/Recount/Skada read live DPS+HPS from those addons when loaded. Manual uses the per-player sliders on the Weights tab."],
+        L["Details!/Recount/Skada read live DPS+HPS from those addons when loaded. Item Level inspects each raid member (28y range). Manual uses the per-player sliders on the Weights tab."],
         function(v) return SplitW.DPSSource and SplitW.DPSSource:IsAvailable(v) end)
 
     local statusFS = makeLabel(parent, "", 260, -211)
@@ -433,6 +434,18 @@ local function buildSetupPage(parent)
         statusFS:SetText("|cffaaaaaa" .. L["Active source"] .. ":|r " .. SplitW.DPSSource:ActiveSourceLabel())
     end
     statusFS:refresh()
+
+    -- Refresh-ilvl button — kicks off an inspect sweep of the raid. Useful
+    -- mostly when the ILVL source is selected, but works any time.
+    local refreshIlvlBtn = makeButton(parent, L["Scan raid ilvl"], 260, -230, 140, function()
+        if SplitW.DPSSource and SplitW.DPSSource.RefreshIlvl then
+            SplitW.DPSSource:RefreshIlvl()
+            C_Timer.After(0.5, function()
+                if parent._refreshPreview then parent._refreshPreview() end
+                statusFS:refresh()
+            end)
+        end
+    end, L["Inspect every raid member to fetch their average item level. Each inspect is ~1.5s and limited to a 28-yard range."])
     -- makeLabel already registered statusFS — but only since the recent factory change.
     -- Defensive: re-register isn't needed.
 

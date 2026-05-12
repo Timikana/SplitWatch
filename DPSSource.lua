@@ -201,12 +201,121 @@ end
 -- ============================================================
 -- PUBLIC API
 -- ============================================================
+-- ============================================================
+-- ILVL SCANNER — uses Blizzard's NotifyInspect API to fetch each raid
+-- member's average item level. Works without any third-party addon, but:
+--   * inspect has a ~28-yard range limit
+--   * one inspect at a time (we throttle ~1.5s between requests)
+--   * results trickle in async via INSPECT_READY
+-- Ilvl maps to both DPS and HPS weights (it's a single character-power
+-- number) — a high-ilvl character is treated as both a strong damager and
+-- a strong healer for balancing purposes.
+-- ============================================================
+local ilvlCache = {}        -- name -> { ilvl = N, time = T }
+local ilvlQueue = {}        -- list of unit IDs awaiting inspect
+local ilvlBusy = false
+local ILVL_CACHE_TTL = 90   -- seconds before we refetch
+
+local ilvlFrame = CreateFrame("Frame")
+ilvlFrame:RegisterEvent("INSPECT_READY")
+
+local function _ilvlProcessNext()
+    if ilvlBusy then return end
+    local unit = table.remove(ilvlQueue, 1)
+    if not unit then return end
+    if not UnitExists(unit) or not CanInspect or not CanInspect(unit) then
+        C_Timer.After(0.3, _ilvlProcessNext)
+        return
+    end
+    ilvlBusy = true
+    pcall(NotifyInspect, unit)
+    -- Safety timeout: if INSPECT_READY never fires (out of range, etc.),
+    -- unblock the queue after 3s and move on.
+    C_Timer.After(3, function()
+        if ilvlBusy then
+            ilvlBusy = false
+            _ilvlProcessNext()
+        end
+    end)
+end
+
+ilvlFrame:SetScript("OnEvent", function(_, _, guid)
+    if not guid then ilvlBusy = false; _ilvlProcessNext(); return end
+    -- Find the raid unit matching this guid.
+    local total = GetNumGroupMembers() or 0
+    for i = 1, total do
+        local unit = (IsInRaid() and ("raid" .. i)) or ("party" .. i)
+        if UnitGUID(unit) == guid then
+            local ilvl
+            if C_PaperDollInfo and C_PaperDollInfo.GetInspectItemLevel then
+                local ok, v = pcall(C_PaperDollInfo.GetInspectItemLevel, unit)
+                if ok then ilvl = v end
+            end
+            if type(ilvl) == "number" and ilvl > 0 then
+                local n = UnitName(unit)
+                if n then ilvlCache[n] = { ilvl = ilvl, time = GetTime() } end
+            end
+            pcall(ClearInspectPlayer)
+            break
+        end
+    end
+    ilvlBusy = false
+    C_Timer.After(1.5, _ilvlProcessNext)
+end)
+
+function DPSSource:RefreshIlvl()
+    wipe(ilvlQueue)
+    local n = GetNumGroupMembers() or 0
+    if n == 0 then return end
+    local prefix = IsInRaid() and "raid" or "party"
+    for i = 1, n do
+        local unit = prefix .. i
+        if UnitExists(unit) and not UnitIsUnit(unit, "player") then
+            ilvlQueue[#ilvlQueue + 1] = unit
+        end
+    end
+    -- Cache our own ilvl directly (no inspect needed for the player).
+    if C_PaperDollInfo and C_PaperDollInfo.GetInspectItemLevel then
+        local ok, v = pcall(C_PaperDollInfo.GetInspectItemLevel, "player")
+        if ok and v and v > 0 then
+            ilvlCache[UnitName("player") or "?"] = { ilvl = v, time = GetTime() }
+        end
+    elseif GetAverageItemLevel then
+        local _, equipped = pcall(GetAverageItemLevel)
+        if equipped and equipped > 0 then
+            ilvlCache[UnitName("player") or "?"] = { ilvl = equipped, time = GetTime() }
+        end
+    end
+    _ilvlProcessNext()
+end
+
+local function getFromIlvl(name)
+    if not name then return nil end
+    local entry = ilvlCache[name]
+    if entry and (GetTime() - entry.time) < ILVL_CACHE_TTL then
+        return entry.ilvl
+    end
+    return nil
+end
+
+local function listFromIlvl()
+    local out = {}
+    for name, entry in pairs(ilvlCache) do
+        if entry and entry.ilvl and entry.ilvl > 0
+            and (GetTime() - entry.time) < ILVL_CACHE_TTL then
+            out[#out + 1] = { name = name, class = nil, dps = entry.ilvl, hps = entry.ilvl }
+        end
+    end
+    return out
+end
+
 function DPSSource:GetDPS(name)
     local src = SplitW:GetDB().dpsSource
     if src == "BUILTIN" then return getDPSFromBuiltin(name) end
     if src == "DETAILS" then return getFromDetails(name, 1) end
     if src == "RECOUNT" then return getFromRecount(name, "damage") end
     if src == "SKADA"   then return getFromSkada(name, "damage") end
+    if src == "ILVL"    then return getFromIlvl(name) end
     return nil
 end
 
@@ -216,6 +325,7 @@ function DPSSource:GetHPS(name)
     if src == "DETAILS" then return getFromDetails(name, 2) end
     if src == "RECOUNT" then return getFromRecount(name, "healing") end
     if src == "SKADA"   then return getFromSkada(name, "healing") end
+    if src == "ILVL"    then return getFromIlvl(name) end
     return nil
 end
 
@@ -308,6 +418,7 @@ function DPSSource:ListActors()
     if src == "DETAILS" then return listFromDetails() end
     if src == "RECOUNT" then return listFromRecount() end
     if src == "SKADA"   then return listFromSkada() end
+    if src == "ILVL"    then return listFromIlvl()    end
     return {}
 end
 
@@ -316,6 +427,7 @@ function DPSSource:IsAvailable(source)
     if source == "DETAILS" then return _G.Details ~= nil end
     if source == "RECOUNT" then return _G.Recount ~= nil end
     if source == "SKADA"   then return _G.Skada ~= nil end
+    if source == "ILVL"    then return true end  -- uses Blizzard inspect API
     return true -- MANUAL
 end
 
@@ -337,6 +449,10 @@ function DPSSource:ActiveSourceLabel()
         return self:IsAvailable("RECOUNT") and "Recount" or "Recount (not loaded)"
     elseif src == "SKADA" then
         return self:IsAvailable("SKADA") and "Skada" or "Skada (not loaded)"
+    elseif src == "ILVL" then
+        local n = 0
+        for _ in pairs(ilvlCache) do n = n + 1 end
+        return string.format("Item Level (inspect) — %d cached", n)
     end
     return "Manual"
 end

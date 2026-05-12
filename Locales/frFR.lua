@@ -10,6 +10,12 @@ L["About"]    = "À propos"
 L["Enable test mode"]  = "Activer le mode test"
 L["Disable test mode"] = "Désactiver le mode test"
 L["not installed"] = "non installé"
+L["Item Level (inspect)"] = "Niveau d'objet (inspect)"
+L["Details!/Recount/Skada read live DPS+HPS from those addons when loaded. Item Level inspects each raid member (28y range). Manual uses the per-player sliders on the Weights tab."] =
+    "Details!/Recount/Skada lisent DPS et HPS en direct depuis ces addons quand ils sont chargés. Niveau d'objet inspecte chaque membre du raid (portée 28y). Manuel utilise les sliders par joueur de l'onglet Joueurs."
+L["Scan raid ilvl"] = "Scanner l'ilvl du raid"
+L["Inspect every raid member to fetch their average item level. Each inspect is ~1.5s and limited to a 28-yard range."] =
+    "Inspecte chaque membre du raid pour récupérer son niveau d'objet moyen. Chaque inspect prend ~1.5s et est limité à 28 yards de portée."
 
 -- General
 L["General"] = "Général"
