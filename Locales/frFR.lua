@@ -5,6 +5,7 @@ local L = SplitW.L
 -- Pages / tabs
 L["Setup"]    = "Réglages"
 L["Players"]  = "Joueurs"
+L["Composition"] = "Composition"
 L["Preview"]  = "Aperçu"
 L["About"]    = "À propos"
 L["Enable test mode"]  = "Activer le mode test"
@@ -134,6 +135,28 @@ L["• Team titles include the player count: 'Équipe A (5)'."] =
     "• Les titres d'équipe incluent le compteur : 'Équipe A (5)'."
 L["• Escape closes the panel (UISpecialFrames registration)."] =
     "• Échap ferme le panneau (intégration UISpecialFrames)."
+
+-- v0.3.0 changelog
+L["• 0 required addons — Details!/Recount/Skada/Item Level/Manual all still optional / built-in."] =
+    "• 0 addon requis — Details!/Recount/Skada/Niveau d'objet/Manuel restent optionnels / intégrés."
+L["• Sister addon to BossWatch + TankWatch."] =
+    "• Addon jumeau de BossWatch + TankWatch."
+L["• Manual locks: right-click a player in the Preview team columns to pin them on Team A / Team B / free. Lock icon shows next to pinned names. Active locks listed on the Composition tab with one-click Free buttons + Clear all."] =
+    "• Verrouillages manuels : clic droit sur un joueur dans les colonnes Aperçu pour le verrouiller sur Équipe A / Équipe B / libérer. Icône cadenas affichée à côté des noms verrouillés. Liste des verrouillages actifs sur l'onglet Composition avec boutons Libérer + Tout déverrouiller."
+L["• Broadcast on Apply: opt-in to auto-post the team rosters to chat (RAID / RAID_WARNING / PARTY / SAY) after a successful Apply."] =
+    "• Annonce sur Apply : option pour poster automatiquement la composition (Team A + Team B) dans un canal de chat (RAID / RAID_WARNING / PARTY / SAY) après un Apply réussi."
+L["• Named presets: save the current constraints + locks + DPS source under a name; reload before a specific fight. UI section with editbox / Save / Load / Delete + scrollable list."] =
+    "• Presets nommés : sauvegarde les contraintes + verrouillages + source DPS sous un nom ; recharge avant un fight. Section UI avec champ texte / Sauvegarder / Charger / Supprimer + liste scrollable."
+L["• Spec detection via inspect — captured alongside ilvl, refines melee/ranged classification for Druid / Shaman / Hunter / Monk / Paladin hybrid specs (accurate range instead of class-default)."] =
+    "• Détection de spec via inspect — capturé en même temps que l'ilvl, affine la classification melee/distance pour les classes hybrides Druide / Chaman / Hunter / Moine / Paladin (vrai range au lieu du défaut par classe)."
+L["• Fixed Battle Rez class list: only Druid / DK / Warlock actually have an in-combat resurrection. Hunter / Paladin / DH removed (false positive)."] =
+    "• Fix liste Battle Rez : seuls Druide / DK / Démoniste ont une résurrection en combat. Hunter / Paladin / DH retirés (faux positif)."
+L["• Fixed Decurse class list: Monk Detox doesn't remove curses; only Mage / Druid / Shaman do."] =
+    "• Fix liste Decurse : Detox du Moine ne retire pas les malédictions ; seuls Mage / Druide / Chaman peuvent."
+L["• Per-player tooltip on team-column rows showing class, role, DPS, HPS, manual weight, lock status."] =
+    "• Infobulle par joueur sur les lignes des colonnes équipe affichant classe, rôle, DPS, HPS, poids manuel, statut de verrouillage."
+L["• Composition tab rename (was 'Joueurs') — covers both Constraints and Manual weights more accurately."] =
+    "• Renommage onglet 'Composition' (était 'Joueurs') — couvre mieux Contraintes + Poids manuels."
 L["• Damage meter sources: Details!, Recount, Skada, Manual — unavailable ones grey out in the dropdown."] =
     "• Sources de damage meter : Details!, Recount, Skada, Manuel — celles non installées sont grisées dans le dropdown."
 L["• Healers balanced by HPS (live read from the active source), DPS by damage."] =
@@ -198,6 +221,35 @@ L["Raid chat"]    = "Canal raid"
 L["Raid warning"] = "Avertissement raid"
 L["Party chat"]   = "Canal groupe"
 L["Say"]          = "Dire"
+
+-- Presets UI
+L["Presets"] = "Presets"
+L["Save the current constraints + locks + DPS source under a name. Reload any preset before a specific fight."] =
+    "Sauvegarde les contraintes + verrouillages + source DPS actuels sous un nom. Recharge n'importe quel preset avant un fight."
+L["Save preset"] = "Sauvegarder le preset"
+L["Save the current configuration under the name in the box."] = "Sauvegarde la configuration actuelle sous le nom saisi."
+L["Load"] = "Charger"
+L["Delete"] = "Supprimer"
+L["No presets yet — save the current config to start."] = "Aucun preset encore — sauvegarde la config actuelle pour commencer."
+
+-- Active locks UI
+L["Active locks"] = "Verrouillages actifs"
+L["Players pinned to a specific team. Right-click a name in the Preview team columns to add a lock; use the buttons below to remove one."] =
+    "Joueurs verrouillés sur une équipe précise. Clic droit sur un nom dans les colonnes Aperçu pour ajouter ; bouton ci-dessous pour retirer."
+L["Clear all locks"] = "Tout déverrouiller"
+L["Remove every player lock."] = "Retire tous les verrouillages."
+L["Free"] = "Libérer"
+L["No active locks."] = "Aucun verrouillage actif."
+
+-- Team-row right-click + tooltip
+L["Lock to Team A"] = "Verrouiller sur Équipe A"
+L["Lock to Team B"] = "Verrouiller sur Équipe B"
+L["Free lock"] = "Libérer le verrouillage"
+L["Class"] = "Classe"
+L["Role"] = "Rôle"
+L["Manual weight"] = "Poids manuel"
+L["Locked on Team %s"] = "Verrouillé sur l'Équipe %s"
+L["Right-click for lock options"] = "Clic droit pour les options de verrouillage"
 L["test mode on (20 simulated members)"] = "mode test activé (20 membres simulés)"
 L["test mode off"] = "mode test désactivé"
 

@@ -93,6 +93,11 @@ function Roster:Scan()
                 online    = online,
                 weight    = SplitW:GetWeight(name) or (SplitW:GetDB().weightDefault or 50),
             }
+            -- Enrich with inspected spec → attack range if we already have it
+            -- cached (the ilvl scan populates this for the whole raid).
+            if SplitW.DPSSource and SplitW.DPSSource.GetCachedRange then
+                entry.attackRange = SplitW.DPSSource:GetCachedRange(name)
+            end
             if r == "TANK" then
                 table.insert(out.tanks, entry)
             elseif r == "HEALER" then

@@ -20,15 +20,23 @@ end
 -- is handled separately because it's a ratio, not a presence check.
 -- ============================================================
 Splitter.CONSTRAINTS = {
+    -- Battle Rez in retail: Druid (Rebirth), DK (Raise Ally), Warlock (Soulstone).
+    -- Hunter / Paladin / DH do NOT have an in-combat resurrection.
     { dbKey = "constraintBR",       id = "BR",
-      classes = { DRUID = true, DEATHKNIGHT = true, WARLOCK = true,
-                  HUNTER = true, PALADIN = true, DEMONHUNTER = true } },
+      classes = { DRUID = true, DEATHKNIGHT = true, WARLOCK = true } },
+    -- Lust givers: Shaman (Heroism/BL), Mage (Time Warp), Hunter (Primal Rage,
+    -- BM-only), Evoker (Fury of the Aspects). Hunter included as approximate;
+    -- toggle off if your hunters are MM/Survival.
     { dbKey = "constraintLust",     id = "LUST",
       classes = { SHAMAN = true, MAGE = true, HUNTER = true, EVOKER = true } },
+    -- Mass Dispel: Priest (any spec).
     { dbKey = "constraintMassDisp", id = "MASS_DISPEL",
       classes = { PRIEST = true } },
+    -- Decurse (Curse removal): Mage (Remove Curse), Druid (Remove Corruption),
+    -- Shaman (Cleanse Spirit). Monk Detox handles Magic + Disease, NOT Curse.
+    -- Paladin Cleanse Toxins handles Poison + Disease, NOT Curse.
     { dbKey = "constraintDecurse",  id = "DECURSE",
-      classes = { MAGE = true, DRUID = true, SHAMAN = true, MONK = true } },
+      classes = { MAGE = true, DRUID = true, SHAMAN = true } },
 }
 
 -- Class → default attack range (approximate; the most common DPS spec).

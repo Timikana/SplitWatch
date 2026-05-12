@@ -6,10 +6,19 @@ versionnage selon [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-12
+
 ### Ajouté
-- **Verrouillages manuels** — épingle un joueur sur une équipe spécifique avant le calcul. L'algo place les verrouillés en premier puis snake-distribue les autres en respectant les locks à toutes les passes (rebalance, contraintes, melee/ranged). Commandes : `/splitw lock <nom> A|B|free` et `/splitw lock clear`. Icône 🔒 affichée à côté du nom dans les colonnes Aperçu.
-- **Annonce sur Apply** — option pour poster automatiquement la composition (Team A + Team B) dans un canal de chat après un Apply réussi. Canaux : `RAID`, `RAID_WARNING` (auto-fallback sur RAID si pas chef/assistant), `PARTY`, `SAY`. Toggle sur Réglages → Général.
-- **Presets nommés** — sauvegarde/charge des configurations complètes (contraintes + locks + source DPS). Commandes : `/splitw preset save|load|delete <nom>`, `/splitw preset list`.
+- **Verrouillages manuels** — épingle un joueur sur une équipe spécifique avant le calcul. L'algo place les verrouillés en premier puis snake-distribue les autres en respectant les locks à toutes les passes (rebalance, contraintes, melee/ranged). **Clic droit** sur un nom dans les colonnes Aperçu ouvre un menu Lock A / Lock B / Free. Icône cadenas affichée à côté des noms verrouillés. Section **"Verrouillages actifs"** sur Composition avec boutons Libérer + Tout déverrouiller. Commandes : `/splitw lock <nom> A|B|free`, `/splitw lock clear`.
+- **Annonce sur Apply** — option pour poster automatiquement la composition (Team A + Team B) dans un canal de chat après un Apply réussi. Canaux : `RAID`, `RAID_WARNING` (auto-fallback sur RAID si pas chef/assistant), `PARTY`, `SAY`. Toggle + dropdown sur Réglages → Général.
+- **Presets nommés** — sauvegarde/charge des configurations complètes (contraintes + locks + source DPS). UI sur Réglages avec champ texte + bouton Sauvegarder, liste scrollable des presets avec boutons Charger / Supprimer par ligne. Commandes : `/splitw preset save|load|delete <nom>`, `/splitw preset list`.
+- **Détection de spec via inspect** — capturé en même temps que l'ilvl (zero coût additionnel), affine la classification melee/distance pour les classes hybrides (Druide / Chaman / Hunter / Moine / Paladin). Cache 90s, fallback sur class-default quand le spec n'est pas encore inspecté.
+- **Infobulle par joueur** sur les lignes des colonnes équipe — hover affiche classe, rôle, DPS, HPS, poids manuel, statut de verrouillage.
+- **Onglet "Composition"** (renommé depuis "Joueurs") — reflète mieux le contenu : Contraintes + Verrouillages + Poids manuels.
+
+### Corrigé
+- **Liste Battle Rez** — seuls Druide / DK / Démoniste ont une résurrection en combat. Hunter / Paladin / DH retirés du tag BR (faux positif qui faisait croire à l'algo qu'il avait une BR alors que non).
+- **Liste Decurse** — Detox du Moine ne retire pas les malédictions (Magie + Maladie seulement). Monk retiré du tag Decurse ; seuls Mage / Druide / Chaman peuvent décurse.
 
 ## [0.2.0] - 2026-05-12
 

@@ -579,10 +579,97 @@ local function buildSetupPage(parent)
     end
     permFS:refresh()
 
+    -- ---- Presets section (save / load / delete named configurations) ----
+    makeSection(parent, L["Presets"], 14, -600, "setup.presets")
+    local pHint = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    pHint:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -624)
+    pHint:SetWidth(600); pHint:SetJustifyH("LEFT")
+    pHint:SetText(L["Save the current constraints + locks + DPS source under a name. Reload any preset before a specific fight."])
+    _registerInSection(pHint)
+
+    local presetEdit = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
+    presetEdit:SetSize(220, 22)
+    presetEdit:SetPoint("TOPLEFT", parent, "TOPLEFT", 22, -650)
+    presetEdit:SetAutoFocus(false)
+    presetEdit:SetMaxLetters(40)
+    presetEdit:SetFontObject("GameFontHighlightSmall")
+    presetEdit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    _registerInSection(presetEdit)
+
+    local presetSaveBtn = makeButton(parent, L["Save preset"], 250, -650, 120, function()
+        local n = presetEdit:GetText()
+        if n and n ~= "" then
+            SplitW:SavePreset(n)
+            presetEdit:SetText("")
+            presetEdit:ClearFocus()
+            if parent._refreshPresetList then parent._refreshPresetList() end
+        end
+    end, L["Save the current configuration under the name in the box."])
+
+    -- Scrollable list of saved presets with per-row Load + Delete buttons.
+    local presetScroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
+    presetScroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -682)
+    presetScroll:SetSize(600, 110)
+    local presetContent = CreateFrame("Frame", nil, presetScroll)
+    presetContent:SetSize(580, 1)
+    presetScroll:SetScrollChild(presetContent)
+    _registerInSection(presetScroll)
+    local presetRows = {}
+    local presetEmpty
+
+    local function refreshPresetList()
+        local names = SplitW:ListPresets()
+        for i, n in ipairs(names) do
+            local row = presetRows[i]
+            if not row then
+                row = CreateFrame("Frame", nil, presetContent)
+                row:SetSize(580, 22)
+                row:SetPoint("TOPLEFT", presetContent, "TOPLEFT", 0, -(i - 1) * 24)
+                row.nameFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                row.nameFS:SetPoint("LEFT", row, "LEFT", 4, 0)
+                row.nameFS:SetWidth(300); row.nameFS:SetJustifyH("LEFT")
+                row.loadBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+                row.loadBtn:SetSize(80, 20)
+                row.loadBtn:SetPoint("LEFT", row.nameFS, "RIGHT", 8, 0)
+                row.loadBtn:SetText(L["Load"])
+                row.delBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+                row.delBtn:SetSize(80, 20)
+                row.delBtn:SetPoint("LEFT", row.loadBtn, "RIGHT", 8, 0)
+                row.delBtn:SetText(L["Delete"])
+                presetRows[i] = row
+            end
+            row.nameFS:SetText(n)
+            row.loadBtn:SetScript("OnClick", function()
+                if SplitW:LoadPreset(n) then
+                    print("|cffffd100SplitWatch:|r " .. format(L["preset loaded: %s"], n))
+                    if SplitW.RefreshAll then SplitW:RefreshAll() end
+                end
+            end)
+            row.delBtn:SetScript("OnClick", function()
+                SplitW:DeletePreset(n)
+                refreshPresetList()
+            end)
+            row:Show()
+        end
+        for i = #names + 1, #presetRows do presetRows[i]:Hide() end
+        presetContent:SetHeight(math.max(1, #names * 24 + 4))
+        if #names == 0 then
+            presetEmpty = presetEmpty or presetContent:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+            presetEmpty:SetPoint("TOPLEFT", presetContent, "TOPLEFT", 14, -8)
+            presetEmpty:SetWidth(560); presetEmpty:SetJustifyH("LEFT")
+            presetEmpty:SetText(L["No presets yet — save the current config to start."])
+            presetEmpty:Show()
+        elseif presetEmpty then
+            presetEmpty:Hide()
+        end
+    end
+    parent._refreshPresetList = refreshPresetList
+    refreshPresetList()
+
     -- Classic banner
     if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE and WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE then
         local banner = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        banner:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -600)
+        banner:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -810)
         banner:SetWidth(600); banner:SetJustifyH("LEFT")
         banner:SetText("|cffffd100" .. L["WARN_CLASSIC"] .. "|r")
     end
@@ -590,8 +677,9 @@ local function buildSetupPage(parent)
     parent.refresh = function()
         statusFS:refresh()
         permFS:refresh()
-        if parent._syncIlvlBtn    then parent._syncIlvlBtn()    end
-        if parent._refreshPreview then parent._refreshPreview() end
+        if parent._syncIlvlBtn      then parent._syncIlvlBtn()      end
+        if parent._refreshPreview   then parent._refreshPreview()   end
+        if parent._refreshPresetList then parent._refreshPresetList() end
     end
 end
 
@@ -622,20 +710,87 @@ local function buildWeightsPage(parent)
         "constraintDecurse", 14, -170,
         L["Enforce at least one decurse class per team."]), "constraintDecurse")
 
+    -- ---- Active locks section (lists pinned players, lets RL free them) ----
+    makeSection(parent, L["Active locks"], 14, -210, "players.locks")
+    local lHint = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    lHint:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -234)
+    lHint:SetWidth(600); lHint:SetJustifyH("LEFT")
+    lHint:SetText(L["Players pinned to a specific team. Right-click a name in the Preview team columns to add a lock; use the buttons below to remove one."])
+    _registerInSection(lHint)
+
+    local locksScroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
+    locksScroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -260)
+    locksScroll:SetSize(600, 90)
+    local locksContent = CreateFrame("Frame", nil, locksScroll)
+    locksContent:SetSize(580, 1)
+    locksScroll:SetScrollChild(locksContent)
+    _registerInSection(locksScroll)
+    local locksRows = {}
+    local locksEmpty
+
+    local clearAllBtn = makeButton(parent, L["Clear all locks"], 14, -358, 160, function()
+        SplitW:ClearLocks()
+        if parent._refreshLocks then parent._refreshLocks() end
+        if SplitW.RefreshAll then SplitW:RefreshAll() end
+    end, L["Remove every player lock."])
+
+    local function refreshLocks()
+        local db = SplitW:GetDB()
+        local pairs_ = {}
+        for n, t in pairs(db.lockedTeams or {}) do pairs_[#pairs_ + 1] = { name = n, team = t } end
+        table.sort(pairs_, function(a, b) return a.name < b.name end)
+        for i, p in ipairs(pairs_) do
+            local row = locksRows[i]
+            if not row then
+                row = CreateFrame("Frame", nil, locksContent)
+                row:SetSize(580, 22)
+                row:SetPoint("TOPLEFT", locksContent, "TOPLEFT", 0, -(i - 1) * 24)
+                row.nameFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                row.nameFS:SetPoint("LEFT", row, "LEFT", 4, 0)
+                row.nameFS:SetWidth(280); row.nameFS:SetJustifyH("LEFT")
+                row.teamFS = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                row.teamFS:SetPoint("LEFT", row.nameFS, "RIGHT", 4, 0)
+                row.teamFS:SetWidth(80); row.teamFS:SetJustifyH("LEFT")
+                row.freeBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+                row.freeBtn:SetSize(80, 20)
+                row.freeBtn:SetPoint("LEFT", row.teamFS, "RIGHT", 8, 0)
+                row.freeBtn:SetText(L["Free"])
+                locksRows[i] = row
+            end
+            row.nameFS:SetText(p.name)
+            row.teamFS:SetText(string.format("|cffffd100→ %s|r", p.team))
+            row.freeBtn:SetScript("OnClick", function()
+                SplitW:SetLock(p.name, nil)
+                refreshLocks()
+                if SplitW.RefreshAll then SplitW:RefreshAll() end
+            end)
+            row:Show()
+        end
+        for i = #pairs_ + 1, #locksRows do locksRows[i]:Hide() end
+        locksContent:SetHeight(math.max(1, #pairs_ * 24 + 4))
+        if #pairs_ == 0 then
+            locksEmpty = locksEmpty or locksContent:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+            locksEmpty:SetPoint("TOPLEFT", locksContent, "TOPLEFT", 14, -8)
+            locksEmpty:SetWidth(560); locksEmpty:SetJustifyH("LEFT")
+            locksEmpty:SetText(L["No active locks."])
+            locksEmpty:Show()
+        elseif locksEmpty then
+            locksEmpty:Hide()
+        end
+    end
+    parent._refreshLocks = refreshLocks
+    refreshLocks()
+
     -- ---- Manual weights section ----
-    makeSection(parent, L["Manual weights"], 14, -210, "weights.main", 640)
+    makeSection(parent, L["Manual weights"], 14, -400, "weights.main", 640)
     local hint = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    hint:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -234)
+    hint:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -424)
     hint:SetWidth(600); hint:SetJustifyH("LEFT")
     hint:SetText("|cffaaaaaa" .. L["Adjust each DPS player's relative weight (1-100). Higher = goes into the lower-scoring team first. Used only when source = Manual."] .. "|r")
     _registerInSection(hint)
 
-    -- Scroll frame — TOPLEFT + fixed size so reparenting into the section
-    -- container doesn't bind it to a BOTTOMRIGHT that itself depends on the
-    -- container's height (circular sizing). Width 600 keeps the inner
-    -- scrollbar well clear of the outer page scrollbar.
     local scroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
-    scroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -258)
+    scroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -448)
     scroll:SetSize(600, 280)
     local content = CreateFrame("Frame", nil, scroll)
     content:SetSize(580, 1)
@@ -714,21 +869,21 @@ local function buildWeightsPage(parent)
 
     -- Action bar — below the scroll (TOPLEFT-anchored at a fixed Y rather than
     -- BOTTOMLEFT, so the chained section sizes them predictably).
-    local resetBtn = makeButton(parent, L["Reset all weights"], 14, -550, 160, function()
+    local resetBtn = makeButton(parent, L["Reset all weights"], 14, -740, 160, function()
         local db = SplitW:GetDB()
         local default = db.weightDefault or 50
         for k in pairs(db.weights) do db.weights[k] = default end
         populate()
     end, L["Reset every stored weight back to the default value."])
 
-    local refreshBtn = makeButton(parent, L["Refresh roster"], 182, -550, 160, function()
+    local refreshBtn = makeButton(parent, L["Refresh roster"], 182, -740, 160, function()
         populate()
     end, L["Re-read the raid roster from Blizzard's API."])
 
     local function testLabel()
         return SplitW.Roster:IsTestMode() and L["Disable test mode"] or L["Enable test mode"]
     end
-    local testBtn = makeButton(parent, testLabel(), 350, -550, 160, function() end,
+    local testBtn = makeButton(parent, testLabel(), 350, -740, 160, function() end,
         L["Use a simulated 20-man roster for UI testing."])
     testBtn:SetScript("OnClick", function()
         SplitW.Roster:SetTestMode(not SplitW.Roster:IsTestMode())
@@ -736,7 +891,10 @@ local function buildWeightsPage(parent)
         populate()
     end)
 
-    parent.refresh = populate
+    parent.refresh = function()
+        populate()
+        if parent._refreshLocks then parent._refreshLocks() end
+    end
     populate()
 end
 
@@ -806,24 +964,121 @@ local function buildPreviewPage(parent)
     afterStatsFS:SetWidth(300); afterStatsFS:SetJustifyH("LEFT")
     _registerInSection(afterStatsFS)
 
-    -- Team A / Team B columns (after split). Width 320 to accommodate
-    -- long Name-Realm strings, SetSpacing for readable line gaps.
-    local function makeTeamColumn(title, x)
+    -- Team A / Team B titles. Each column's player rows are individual
+    -- clickable Frames (built lazily by renderTeamRows) so right-click can
+    -- open the lock context menu and hover can show a per-player tooltip.
+    local function makeTeamTitle(title, x)
         local titleFS = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         titleFS:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -200)
         titleFS:SetText(title)
         titleFS:SetTextColor(1, 0.82, 0)
-        local listFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        listFS:SetPoint("TOPLEFT", titleFS, "BOTTOMLEFT", 0, -10)
-        listFS:SetWidth(320); listFS:SetJustifyH("LEFT")
-        listFS:SetSpacing(4)
         _registerInSection(titleFS)
-        _registerInSection(listFS)
-        return titleFS, listFS
+        return titleFS
     end
-    local titleA, listA = makeTeamColumn(L["Team A"], 14)
-    local titleB, listB = makeTeamColumn(L["Team B"], 360)
+    local titleA = makeTeamTitle(L["Team A"], 14)
+    local titleB = makeTeamTitle(L["Team B"], 360)
     local baseA, baseB = L["Team A"], L["Team B"]
+
+    -- Shared dropdown frame used by EasyMenu to render the right-click lock menu.
+    local lockDropdown = _G.SplitWatchLockDropdown
+        or CreateFrame("Frame", "SplitWatchLockDropdown", UIParent, "UIDropDownMenuTemplate")
+    local rowsA, rowsB = {}, {}
+
+    -- Forward-declare so the menu callback can recompute.
+    local recomputeAndRefresh
+
+    local function showLockMenu(entry)
+        local menu = {
+            { text = entry.name, isTitle = true, notCheckable = true },
+            { text = " ",        disabled = true, notCheckable = true },
+            { text = L["Lock to Team A"],
+              func = function() SplitW:SetLock(entry.name, "A"); recomputeAndRefresh() end,
+              notCheckable = true,
+              disabled = entry.locked == "A" },
+            { text = L["Lock to Team B"],
+              func = function() SplitW:SetLock(entry.name, "B"); recomputeAndRefresh() end,
+              notCheckable = true,
+              disabled = entry.locked == "B" },
+            { text = L["Free lock"],
+              func = function() SplitW:SetLock(entry.name, nil); recomputeAndRefresh() end,
+              notCheckable = true,
+              disabled = not entry.locked },
+        }
+        EasyMenu(menu, lockDropdown, "cursor", 0, 0, "MENU")
+    end
+
+    local function showRowTooltip(self)
+        local e = self._entry
+        if not e then return end
+        local r, g, b = classColor(e.class)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine(e.name, r, g, b)
+        if e.class then GameTooltip:AddLine(L["Class"] .. ": " .. e.class, 1, 1, 1) end
+        if e.role then  GameTooltip:AddLine(L["Role"]  .. ": " .. e.role,  1, 1, 1) end
+        local dps = SplitW.DPSSource and SplitW.DPSSource:GetDPS(e.name)
+        if dps and dps > 0 then GameTooltip:AddLine("DPS: " .. fmtNum(dps), 1, 1, 1) end
+        local hps = SplitW.DPSSource and SplitW.DPSSource:GetHPS(e.name)
+        if hps and hps > 0 then GameTooltip:AddLine("HPS: " .. fmtNum(hps), 1, 1, 1) end
+        local mw = SplitW:GetWeight(e.name)
+        if mw then GameTooltip:AddLine(L["Manual weight"] .. ": " .. mw, 1, 1, 1) end
+        if e.locked then
+            GameTooltip:AddLine(string.format(L["Locked on Team %s"], e.locked), 1, 0.82, 0)
+        end
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine("|cffaaaaaa" .. L["Right-click for lock options"] .. "|r")
+        GameTooltip:Show()
+    end
+
+    local LOCK_ICON = "|TInterface\\PetBattles\\PetIcon-Mechanical:14:14:0:0:32:32:2:30:2:30|t"
+    local function buildRowText(e, src)
+        local r, g, b = classColor(e.class)
+        local suffix = ""
+        local v = SplitW.DPSSource and SplitW.DPSSource:GetDPS(e.name)
+        if v and v > 0 then
+            if src == "ILVL" then
+                suffix = string.format("  |cffaaaaaa[ilvl %d]|r", math.floor(v + 0.5))
+            else
+                suffix = string.format("  |cffaaaaaa[%s]|r", fmtNum(v))
+            end
+        end
+        local lockBadge = e.locked and (" " .. LOCK_ICON) or ""
+        return string.format("%s  |cff%02x%02x%02x%s|r%s%s",
+            roleIcon(e.role, 16),
+            math.floor(r * 255), math.floor(g * 255), math.floor(b * 255),
+            e.name, lockBadge, suffix)
+    end
+
+    local function renderTeamRows(team, cache, anchorTitle, columnX)
+        local src = SplitW:GetDB().dpsSource
+        for i, e in ipairs(team) do
+            local row = cache[i]
+            if not row then
+                row = CreateFrame("Frame", nil, parent)
+                row:SetSize(320, 18)
+                row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                row.text:SetPoint("LEFT", row, "LEFT", 2, 0)
+                row.text:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+                row.text:SetJustifyH("LEFT")
+                row:EnableMouse(true)
+                row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+                row:SetScript("OnEnter", showRowTooltip)
+                row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+                row:SetScript("OnMouseUp", function(self, button)
+                    if button == "RightButton" and self._entry then
+                        showLockMenu(self._entry)
+                    end
+                end)
+                _registerInSection(row)
+                cache[i] = row
+            end
+            row:ClearAllPoints()
+            row:SetPoint("TOPLEFT", anchorTitle, "BOTTOMLEFT", 0, -10 - (i - 1) * 20)
+            row._entry = e
+            row.text:SetText(buildRowText(e, src))
+            row:Show()
+        end
+        for i = #team + 1, #cache do cache[i]:Hide() end
+    end
 
     -- Vertical separator between the two team columns (gold gradient).
     local sep = parent:CreateTexture(nil, "ARTWORK")
@@ -861,31 +1116,24 @@ local function buildPreviewPage(parent)
         CONSTRAINT_UNSWAPPABLE_MR        = ICON .. L["Couldn't fully balance melee/ranged ratio."],
     }
 
-    local LOCK_ICON = "|TInterface\\PetBattles\\PetIcon-Mechanical:14:14:0:0:32:32:2:30:2:30|t"
-    local function fmtTeam(team)
-        if #team == 0 then return "|cff888888" .. L["(empty)"] .. "|r" end
-        local src = SplitW:GetDB().dpsSource
-        local lines = {}
-        for _, e in ipairs(team) do
-            local r, g, b = classColor(e.class)
-            -- Per-player suffix: ilvl when ILVL source, otherwise DPS (k-format).
-            -- Always grey so the name stays the focal point.
-            local suffix = ""
-            local v = SplitW.DPSSource and SplitW.DPSSource:GetDPS(e.name)
-            if v and v > 0 then
-                if src == "ILVL" then
-                    suffix = string.format("  |cffaaaaaa[ilvl %d]|r", math.floor(v + 0.5))
-                else
-                    suffix = string.format("  |cffaaaaaa[%s]|r", fmtNum(v))
-                end
-            end
-            local lockBadge = e.locked and (" " .. LOCK_ICON) or ""
-            lines[#lines + 1] = string.format("%s  |cff%02x%02x%02x%s|r%s%s",
-                roleIcon(e.role, 16),
-                math.floor(r*255), math.floor(g*255), math.floor(b*255),
-                e.name, lockBadge, suffix)
-        end
-        return table.concat(lines, "\n")
+    -- Empty-state placeholder FontStrings under each title.
+    local emptyA = parent:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+    emptyA:SetPoint("TOPLEFT", titleA, "BOTTOMLEFT", 0, -10)
+    emptyA:SetText("|cff888888" .. L["(empty)"] .. "|r")
+    emptyA:Hide()
+    _registerInSection(emptyA)
+    local emptyB = parent:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+    emptyB:SetPoint("TOPLEFT", titleB, "BOTTOMLEFT", 0, -10)
+    emptyB:SetText("|cff888888" .. L["(empty)"] .. "|r")
+    emptyB:Hide()
+    _registerInSection(emptyB)
+
+    -- Recompute the split (re-runs Splitter with current locks / constraints)
+    -- and refresh the page. Used by the right-click lock menu.
+    recomputeAndRefresh = function()
+        local r = SplitW.Roster:Scan()
+        SplitW:GetDB().lastSplit = SplitW.Splitter:Compute(r)
+        if parent.refresh then parent.refresh() end
     end
 
     parent.refresh = function()
@@ -927,7 +1175,9 @@ local function buildPreviewPage(parent)
         if not split then
             afterStatsFS:SetText("|cff888888" .. L["No split computed yet — click 'Compute split'."] .. "|r")
             titleA:SetText(baseA); titleB:SetText(baseB)
-            listA:SetText(""); listB:SetText("")
+            for _, row in ipairs(rowsA) do row:Hide() end
+            for _, row in ipairs(rowsB) do row:Hide() end
+            emptyA:Hide(); emptyB:Hide()
             warnFS:SetText("")
             return
         end
@@ -949,8 +1199,10 @@ local function buildPreviewPage(parent)
 
         titleA:SetText(string.format("%s  |cffaaaaaa(%d)|r", baseA, #split.teamA))
         titleB:SetText(string.format("%s  |cffaaaaaa(%d)|r", baseB, #split.teamB))
-        listA:SetText(fmtTeam(split.teamA))
-        listB:SetText(fmtTeam(split.teamB))
+        renderTeamRows(split.teamA, rowsA, titleA, 14)
+        renderTeamRows(split.teamB, rowsB, titleB, 360)
+        if #split.teamA == 0 then emptyA:Show() else emptyA:Hide() end
+        if #split.teamB == 0 then emptyB:Show() else emptyB:Hide() end
 
         if #split.warnings > 0 then
             local out = {}
@@ -1057,6 +1309,18 @@ local function buildAboutPage(parent)
     -- ---- Changelog (chained at the bottom) ----
     makeSection(parent, L["Changelog"], 14, -400, "about.changelog")
     local entries = {
+        { ver = "0.3.0", date = "2026-05-12", lines = {
+            L["• 0 required addons — Details!/Recount/Skada/Item Level/Manual all still optional / built-in."],
+            L["• Sister addon to BossWatch + TankWatch."],
+            L["• Manual locks: right-click a player in the Preview team columns to pin them on Team A / Team B / free. Lock icon shows next to pinned names. Active locks listed on the Composition tab with one-click Free buttons + Clear all."],
+            L["• Broadcast on Apply: opt-in to auto-post the team rosters to chat (RAID / RAID_WARNING / PARTY / SAY) after a successful Apply."],
+            L["• Named presets: save the current constraints + locks + DPS source under a name; reload before a specific fight. UI section with editbox / Save / Load / Delete + scrollable list."],
+            L["• Spec detection via inspect — captured alongside ilvl, refines melee/ranged classification for Druid / Shaman / Hunter / Monk / Paladin hybrid specs (accurate range instead of class-default)."],
+            L["• Fixed Battle Rez class list: only Druid / DK / Warlock actually have an in-combat resurrection. Hunter / Paladin / DH removed (false positive)."],
+            L["• Fixed Decurse class list: Monk Detox doesn't remove curses; only Mage / Druid / Shaman do."],
+            L["• Per-player tooltip on team-column rows showing class, role, DPS, HPS, manual weight, lock status."],
+            L["• Composition tab rename (was 'Joueurs') — covers both Constraints and Manual weights more accurately."],
+        }},
         { ver = "0.2.0", date = "2026-05-12", lines = {
             L["• 0 required addons — Details!/Recount/Skada remain optional integrations alongside the new Item Level (inspect) source and the per-player Manual sliders."],
             L["• Sister addon to BossWatch + TankWatch — shares the side-tab navigation and the family UI."],
@@ -1273,7 +1537,7 @@ local function build()
     -- Bottom tabs
     local tabDefs = {
         { id = "setup",   label = L["Setup"]   },
-        { id = "weights", label = L["Players"] },
+        { id = "weights", label = L["Composition"] },
         { id = "preview", label = L["Preview"] },
         { id = "about",   label = L["About"]   },
     }
