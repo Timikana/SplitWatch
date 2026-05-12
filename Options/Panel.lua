@@ -1194,7 +1194,10 @@ local function build()
             end
         end
         for k, p in pairs(pages) do
-            if k == id then p:Show(); if p.refresh then p:refresh() end
+            if k == id then
+                p:Show()
+                local target = p.content or p
+                if target.refresh then target:refresh() end
             else p:Hide() end
         end
         panel._currentTab = id
@@ -1232,10 +1235,13 @@ local function build()
         addTooltip(t, t:GetText() or "")
     end
 
-    -- Refresh all pages
+    -- Refresh all pages — pages[id] is the outer ScrollFrame, but each page
+    -- builder stores its .refresh handler on the content child (sf.content),
+    -- so unwrap before calling.
     refresh = function()
         local cur = pages[panel._currentTab or "setup"]
-        if cur and cur.refresh then cur:refresh() end
+        local target = cur and cur.content or cur
+        if target and target.refresh then target:refresh() end
     end
     SplitW.RefreshAll = refresh
     panel.refreshAll = refresh
