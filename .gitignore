@@ -1,9 +1,32 @@
-.idea/
-*.zip
-.release/
-*.tmp
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
 
-# Local-only — Claude Code workspace state and secrets
+# Editors / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code
 .claude/
+.claude.local/
+CLAUDE.md
+
+# Secrets — Discord support server
 .env
-.env.*
+
+# WoW addon build / packager
+.release/
+.pkgmeta.local
+*.zip
+*.tar.gz
+
+# WoW SavedVariables
+WTF/
+*.lua.bak
+
+# Logs
+*.log
