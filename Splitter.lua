@@ -78,6 +78,36 @@ function Splitter:Compute(roster)
         end
     end
 
+    -- Size rebalance pass — the per-role snake distribution can produce
+    -- uneven team sizes when role counts are odd (e.g. 2T + 1H + 17DPS = 20
+    -- → 1T+1H+9DPS = 11 vs 1T+0H+8DPS = 9, a gap of 2). For an even raid we
+    -- want a 0-gap split, for an odd raid we tolerate a 1-gap. Move the
+    -- weakest DPS from the larger team to the smaller one until the gap is
+    -- ≤ 1. Picking the weakest minimises the score-balance disruption.
+    local function _moveWeakestDps(fromTeam, fromIsA)
+        for i = #fromTeam, 1, -1 do
+            local e = fromTeam[i]
+            if e.role ~= "TANK" and e.role ~= "HEALER" then
+                table.remove(fromTeam, i)
+                local w = resolveDmgWeight(e)
+                if fromIsA then
+                    table.insert(B, e); e.team = "B"
+                    sumA = sumA - w; sumB = sumB + w
+                    dpsA = dpsA - 1; dpsB = dpsB + 1
+                else
+                    table.insert(A, e); e.team = "A"
+                    sumB = sumB - w; sumA = sumA + w
+                    dpsB = dpsB - 1; dpsA = dpsA + 1
+                end
+                return true
+            end
+        end
+        return false
+    end
+    while math.abs(#A - #B) > 1 do
+        if not _moveWeakestDps(#A > #B and A or B, #A > #B) then break end
+    end
+
     -- Slot warnings: a raid has 8 subgroups of 5. Worst case each team gets up
     -- to 4 subgroups = 20 players. Anything beyond 40 total is impossible anyway.
     if #A > 20 then table.insert(warnings, "TEAM_A_OVER") end
