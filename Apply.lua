@@ -44,11 +44,21 @@ local function broadcastSplit()
     SendChatMessage("[SplitWatch] Team B: " .. fmt(split.teamB), channel)
 end
 
+local function snapshotApplied()
+    local db = SplitW:GetDB()
+    local split = db.lastSplit
+    if not split then return end
+    db.lastAppliedSplit = {}
+    for _, e in ipairs(split.teamA) do db.lastAppliedSplit[e.name] = "A" end
+    for _, e in ipairs(split.teamB) do db.lastAppliedSplit[e.name] = "B" end
+end
+
 local function step()
     if not Apply._queue or #Apply._queue == 0 then
         Apply._running = false
         Apply._queue = nil
         print("|cffffd100SplitWatch:|r " .. L["split applied"])
+        snapshotApplied()
         broadcastSplit()
         if SplitW.RefreshAll then SplitW:RefreshAll() end
         return

@@ -37,6 +37,18 @@ Splitter.CONSTRAINTS = {
     -- Paladin Cleanse Toxins handles Poison + Disease, NOT Curse.
     { dbKey = "constraintDecurse",  id = "DECURSE",
       classes = { MAGE = true, DRUID = true, SHAMAN = true } },
+    -- External tank CDs: Paladin (BoP / BoSac / LoH), Priest (Pain Sup / GS),
+    -- Druid (Ironbark), Monk (Life Cocoon). All require a healer spec; we
+    -- filter by entry.role = "HEALER" so a Ret Pala / Shadow Priest / Boomkin
+    -- / WW Monk doesn't falsely satisfy the constraint.
+    { dbKey = "constraintExternal", id = "EXTERNAL",
+      classes = { PALADIN = true, PRIEST = true, DRUID = true, MONK = true },
+      requireRole = "HEALER" },
+    -- Soak immunities (full damage immunity for ~5-8s): Paladin (Divine Shield),
+    -- Mage (Ice Block), Hunter (Aspect of the Turtle). Useful for soak-mechanic
+    -- fights where one player has to eat a hit and survive via immunity.
+    { dbKey = "constraintSoak",     id = "SOAK",
+      classes = { PALADIN = true, MAGE = true, HUNTER = true } },
 }
 
 -- Class → default attack range (approximate; the most common DPS spec).
@@ -57,9 +69,11 @@ local function entryRange(entry)
     return entry.attackRange or Splitter.CLASS_RANGE[entry.class] or "MELEE"
 end
 
-local function teamHasClass(team, classSet)
+local function teamHasClass(team, classSet, requireRole)
     for _, e in ipairs(team) do
-        if classSet[e.class] then return true end
+        if classSet[e.class] and (not requireRole or e.role == requireRole) then
+            return true
+        end
     end
     return false
 end
@@ -211,8 +225,8 @@ function Splitter:Compute(roster)
     -- in (lackingTeam) that does NOT match the classes. Pick the swap that
     -- minimises |scoreA - scoreB| change.
     local function ensurePresence(constraint)
-        local hasA = teamHasClass(A, constraint.classes)
-        local hasB = teamHasClass(B, constraint.classes)
+        local hasA = teamHasClass(A, constraint.classes, constraint.requireRole)
+        local hasB = teamHasClass(B, constraint.classes, constraint.requireRole)
         if hasA and hasB then return true end
         if not hasA and not hasB then
             table.insert(warnings, "CONSTRAINT_MISSING_" .. constraint.id)
@@ -221,12 +235,16 @@ function Splitter:Compute(roster)
         local lacking      = hasA and B or A
         local lackingIsA   = not hasA
         local source       = hasA and A or B
+        -- For role-filtered constraints (e.g. EXTERNAL needs a HEALER), the
+        -- swap must move a player of THAT role between teams. Default to DPS
+        -- swaps for pure-class constraints.
+        local swapRole     = constraint.requireRole or "DAMAGER"
         local bestI, bestJ, bestDelta
         for i, candidate in ipairs(source) do
-            if candidate.role == "DAMAGER" and constraint.classes[candidate.class]
+            if candidate.role == swapRole and constraint.classes[candidate.class]
                and not candidate.locked then
                 for j, target in ipairs(lacking) do
-                    if target.role == "DAMAGER"
+                    if target.role == swapRole
                        and not constraint.classes[target.class]
                        and not target.locked then
                         local wc = resolveDmgWeight(candidate)

@@ -157,6 +157,12 @@ L["• Per-player tooltip on team-column rows showing class, role, DPS, HPS, man
     "• Infobulle par joueur sur les lignes des colonnes équipe affichant classe, rôle, DPS, HPS, poids manuel, statut de verrouillage."
 L["• Composition tab rename (was 'Joueurs') — covers both Constraints and Manual weights more accurately."] =
     "• Renommage onglet 'Composition' (était 'Joueurs') — couvre mieux Contraintes + Poids manuels."
+L["• Two new constraints: External CD healer per team (Pala/Priest/Druid/Monk filtered to HEALER role), Soak immunity per team (Pala/Mage/Hunter)."] =
+    "• Deux nouvelles contraintes : CD externe heal par équipe (Pala/Prêtre/Druide/Moine filtrés au rôle HEALER), Immunité soak par équipe (Pala/Mage/Hunter)."
+L["• Drag-and-drop swap on Preview team rows: left-click a name, then left-click any player on the OTHER team to swap them. Both auto-locked so the swap persists."] =
+    "• Drag-and-drop dans Aperçu : clic gauche sur un nom puis clic gauche sur un joueur de l'AUTRE équipe pour les échanger. Les deux sont auto-verrouillés pour que l'échange persiste."
+L["• Movement indicator on Preview rows: orange arrow next to players whose team changed since the last Apply — spot recompute churn at a glance."] =
+    "• Indicateur de mouvement dans Aperçu : flèche orange à côté des joueurs qui ont changé d'équipe depuis le dernier Apply — détecte le churn d'un coup d'œil."
 L["• Damage meter sources: Details!, Recount, Skada, Manual — unavailable ones grey out in the dropdown."] =
     "• Sources de damage meter : Details!, Recount, Skada, Manuel — celles non installées sont grisées dans le dropdown."
 L["• Healers balanced by HPS (live read from the active source), DPS by damage."] =
@@ -250,6 +256,28 @@ L["Role"] = "Rôle"
 L["Manual weight"] = "Poids manuel"
 L["Locked on Team %s"] = "Verrouillé sur l'Équipe %s"
 L["Right-click for lock options"] = "Clic droit pour les options de verrouillage"
+L["Left-click + click another team's player to swap"] = "Clic gauche + clic sur un joueur de l'autre équipe pour échanger"
+
+-- New constraints (v0.3.1)
+L["Decurse per team (Mage/Druid/Shaman)"] = "Décurse par équipe (Mage/Druide/Chaman)"
+L["External CD healer per team (Paladin/Priest/Druid/Monk healer)"] =
+    "CD externe heal par équipe (Paladin/Prêtre/Druide/Moine heal)"
+L["Enforce at least one healer with a tank-targetable defensive (BoP, Pain Sup, Ironbark, Life Cocoon) per team."] =
+    "Force au moins un heal avec un CD externe ciblable (BoP, Sup. douleur, Écorce de fer, Cocon vital) par équipe."
+L["Soak immunity per team (Paladin/Mage/Hunter)"] =
+    "Immunité soak par équipe (Paladin/Mage/Hunter)"
+L["Enforce at least one full damage-immunity class (Divine Shield / Ice Block / Aspect of the Turtle) per team."] =
+    "Force au moins une classe avec immunité complète (Bouclier divin / Bloc de glace / Aspect de la tortue) par équipe."
+
+-- Constraint warnings (v0.3.1)
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tNo healer with an external defensive in the raid — constraint cannot be satisfied."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tAucun heal avec un CD externe dans le raid — contrainte non satisfaite."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tCouldn't swap to satisfy external CDs (no compatible healer pair)."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tSwap impossible pour les CD externes (pas de paire de heals compatible)."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tNo immunity class (Paladin / Mage / Hunter) in the raid — constraint cannot be satisfied."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tAucune classe avec immunité (Paladin / Mage / Hunter) dans le raid — contrainte non satisfaite."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tCouldn't swap to satisfy soak immunity."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tSwap impossible pour l'immunité soak."
 L["test mode on (20 simulated members)"] = "mode test activé (20 membres simulés)"
 L["test mode off"] = "mode test désactivé"
 

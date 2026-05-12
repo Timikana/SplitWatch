@@ -16,6 +16,12 @@ versionnage selon [SemVer](https://semver.org/lang/fr/).
 - **Infobulle par joueur** sur les lignes des colonnes équipe — hover affiche classe, rôle, DPS, HPS, poids manuel, statut de verrouillage.
 - **Onglet "Composition"** (renommé depuis "Joueurs") — reflète mieux le contenu : Contraintes + Verrouillages + Poids manuels.
 
+- **Deux nouvelles contraintes** :
+  - **CD externe heal par équipe** (Paladin / Prêtre / Druide / Moine **filtré au rôle HEALER** uniquement) — assure qu'au moins un soigneur avec un CD externe ciblable (BoP, Suppression de la douleur, Écorce de fer, Cocon vital) est dans chaque équipe pour mitiger les pics de dégâts tank.
+  - **Immunité soak par équipe** (Paladin / Mage / Hunter) — au moins une classe avec immunité complète aux dégâts (Bouclier divin / Bloc de glace / Aspect de la tortue) par équipe pour les mécaniques de soak.
+- **Drag-and-drop dans Aperçu** — clic gauche sur un nom dans une colonne équipe, puis clic gauche sur n'importe quel joueur de l'AUTRE équipe pour les échanger. Les deux sont auto-verrouillés pour que l'échange persiste à travers les recompute.
+- **Indicateur de mouvement** — flèche orange à côté des joueurs dont l'équipe a changé depuis le dernier Apply réussi. `lastAppliedSplit` tracké dans `SplitWatchDB` et comparé à chaque rendu.
+
 ### Corrigé
 - **Liste Battle Rez** — seuls Druide / DK / Démoniste ont une résurrection en combat. Hunter / Paladin / DH retirés du tag BR (faux positif qui faisait croire à l'algo qu'il avait une BR alors que non).
 - **Liste Decurse** — Detox du Moine ne retire pas les malédictions (Magie + Maladie seulement). Monk retiré du tag Decurse ; seuls Mage / Druide / Chaman peuvent décurse.

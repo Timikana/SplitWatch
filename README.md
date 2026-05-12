@@ -41,7 +41,11 @@ SplitWatch reads your raid roster, runs a snake-distribution algorithm balanced 
   - ☐ Balance melee vs ranged (class-based heuristic, refined by inspect-spec when available)
   - ☐ Mass Dispel per team — Priest
   - ☐ Decurse per team — Mage / Druid / Shaman
+  - ☐ External CD healer per team — Paladin / Priest / Druid / Monk (filtered to HEALER role)
+  - ☐ Soak immunity per team — Paladin / Mage / Hunter (Divine Shield / Ice Block / Aspect of the Turtle)
 - **Manual locks** — pin a player on Team A or Team B before computing. Right-click a name in the Preview columns to open the lock menu, or use `/splitw lock <name> A|B|free`. The algorithm respects locks across all passes (snake distribution, size rebalance, constraint resolver, melee/ranged equaliser).
+- **Drag-and-drop swap** — left-click a name in one team column, then left-click any player on the OTHER team to swap them. Both players are auto-locked so the swap persists across recomputes.
+- **Movement indicator** — orange arrow next to a player whose team changed since the last Apply, so the RL spots recompute churn at a glance.
 - **Named presets** — save the current constraints + locks + DPS source under a name; reload before a specific fight. UI on Réglages with save / load / delete buttons, or `/splitw preset save|load|delete <name>` / `list`.
 - **Broadcast on Apply** — optionally auto-post the team rosters to chat (RAID / RAID_WARNING / PARTY / SAY) when a split is applied, so the raid sees who's on what team.
 - **Per-player tooltips** on Preview team rows — hover a name to see class, role, DPS, HPS, manual weight, and lock status at a glance.

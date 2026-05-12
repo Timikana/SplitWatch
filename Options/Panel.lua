@@ -706,20 +706,26 @@ local function buildWeightsPage(parent)
     markAsNew(makeCheck(parent, L["Mass Dispel per team (Priest)"],
         "constraintMassDisp", 14, -142,
         L["Enforce at least one Priest per team for Mass Dispel."]), "constraintMassDisp")
-    markAsNew(makeCheck(parent, L["Decurse per team (Mage/Druid/Shaman/Monk)"],
+    markAsNew(makeCheck(parent, L["Decurse per team (Mage/Druid/Shaman)"],
         "constraintDecurse", 14, -170,
         L["Enforce at least one decurse class per team."]), "constraintDecurse")
+    markAsNew(makeCheck(parent, L["External CD healer per team (Paladin/Priest/Druid/Monk healer)"],
+        "constraintExternal", 14, -198,
+        L["Enforce at least one healer with a tank-targetable defensive (BoP, Pain Sup, Ironbark, Life Cocoon) per team."]), "constraintExternal")
+    markAsNew(makeCheck(parent, L["Soak immunity per team (Paladin/Mage/Hunter)"],
+        "constraintSoak", 14, -226,
+        L["Enforce at least one full damage-immunity class (Divine Shield / Ice Block / Aspect of the Turtle) per team."]), "constraintSoak")
 
     -- ---- Active locks section (lists pinned players, lets RL free them) ----
-    makeSection(parent, L["Active locks"], 14, -210, "players.locks")
+    makeSection(parent, L["Active locks"], 14, -270, "players.locks")
     local lHint = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    lHint:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -234)
+    lHint:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -294)
     lHint:SetWidth(600); lHint:SetJustifyH("LEFT")
     lHint:SetText(L["Players pinned to a specific team. Right-click a name in the Preview team columns to add a lock; use the buttons below to remove one."])
     _registerInSection(lHint)
 
     local locksScroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
-    locksScroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -260)
+    locksScroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -320)
     locksScroll:SetSize(600, 90)
     local locksContent = CreateFrame("Frame", nil, locksScroll)
     locksContent:SetSize(580, 1)
@@ -728,7 +734,7 @@ local function buildWeightsPage(parent)
     local locksRows = {}
     local locksEmpty
 
-    local clearAllBtn = makeButton(parent, L["Clear all locks"], 14, -358, 160, function()
+    local clearAllBtn = makeButton(parent, L["Clear all locks"], 14, -418, 160, function()
         SplitW:ClearLocks()
         if parent._refreshLocks then parent._refreshLocks() end
         if SplitW.RefreshAll then SplitW:RefreshAll() end
@@ -782,15 +788,15 @@ local function buildWeightsPage(parent)
     refreshLocks()
 
     -- ---- Manual weights section ----
-    makeSection(parent, L["Manual weights"], 14, -400, "weights.main", 640)
+    makeSection(parent, L["Manual weights"], 14, -460, "weights.main", 640)
     local hint = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    hint:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -424)
+    hint:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -484)
     hint:SetWidth(600); hint:SetJustifyH("LEFT")
     hint:SetText("|cffaaaaaa" .. L["Adjust each DPS player's relative weight (1-100). Higher = goes into the lower-scoring team first. Used only when source = Manual."] .. "|r")
     _registerInSection(hint)
 
     local scroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
-    scroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -448)
+    scroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -508)
     scroll:SetSize(600, 280)
     local content = CreateFrame("Frame", nil, scroll)
     content:SetSize(580, 1)
@@ -869,21 +875,21 @@ local function buildWeightsPage(parent)
 
     -- Action bar — below the scroll (TOPLEFT-anchored at a fixed Y rather than
     -- BOTTOMLEFT, so the chained section sizes them predictably).
-    local resetBtn = makeButton(parent, L["Reset all weights"], 14, -740, 160, function()
+    local resetBtn = makeButton(parent, L["Reset all weights"], 14, -800, 160, function()
         local db = SplitW:GetDB()
         local default = db.weightDefault or 50
         for k in pairs(db.weights) do db.weights[k] = default end
         populate()
     end, L["Reset every stored weight back to the default value."])
 
-    local refreshBtn = makeButton(parent, L["Refresh roster"], 182, -740, 160, function()
+    local refreshBtn = makeButton(parent, L["Refresh roster"], 182, -800, 160, function()
         populate()
     end, L["Re-read the raid roster from Blizzard's API."])
 
     local function testLabel()
         return SplitW.Roster:IsTestMode() and L["Disable test mode"] or L["Enable test mode"]
     end
-    local testBtn = makeButton(parent, testLabel(), 350, -740, 160, function() end,
+    local testBtn = makeButton(parent, testLabel(), 350, -800, 160, function() end,
         L["Use a simulated 20-man roster for UI testing."])
     testBtn:SetScript("OnClick", function()
         SplitW.Roster:SetTestMode(not SplitW.Roster:IsTestMode())
@@ -1026,10 +1032,15 @@ local function buildPreviewPage(parent)
         end
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("|cffaaaaaa" .. L["Right-click for lock options"] .. "|r")
+        GameTooltip:AddLine("|cffaaaaaa" .. L["Left-click + click another team's player to swap"] .. "|r")
         GameTooltip:Show()
     end
 
-    local LOCK_ICON = "|TInterface\\PetBattles\\PetIcon-Mechanical:14:14:0:0:32:32:2:30:2:30|t"
+    local LOCK_ICON  = "|TInterface\\PetBattles\\PetIcon-Mechanical:14:14:0:0:32:32:2:30:2:30|t"
+    -- Movement indicator: shown when this player's team in the current split
+    -- differs from the team they were on at the last Apply. Helps spot
+    -- recompute churn at a glance.
+    local MOVED_ICON = "|TInterface\\Buttons\\UI-SpellbookIcon-NextPage-Up:14:14:0:0|t"
     local function buildRowText(e, src)
         local r, g, b = classColor(e.class)
         local suffix = ""
@@ -1042,10 +1053,25 @@ local function buildPreviewPage(parent)
             end
         end
         local lockBadge = e.locked and (" " .. LOCK_ICON) or ""
-        return string.format("%s  |cff%02x%02x%02x%s|r%s%s",
+        local movedBadge = ""
+        local prev = SplitW:GetDB().lastAppliedSplit
+        if prev and prev[e.name] and prev[e.name] ~= e.team then
+            movedBadge = "  |cffff8855" .. MOVED_ICON .. "|r"
+        end
+        return string.format("%s  |cff%02x%02x%02x%s|r%s%s%s",
             roleIcon(e.role, 16),
             math.floor(r * 255), math.floor(g * 255), math.floor(b * 255),
-            e.name, lockBadge, suffix)
+            e.name, lockBadge, movedBadge, suffix)
+    end
+
+    -- Drag state shared across all team rows. Left-mouse-down on a row marks
+    -- it as the drag source; left-mouse-up on any other row swaps the pair
+    -- by setting locks on both names. The swap persists across recomputes.
+    local dragSource
+
+    local function clearDragVisuals()
+        for _, r in ipairs(rowsA) do if r.text then r.text:SetAlpha(1) end end
+        for _, r in ipairs(rowsB) do if r.text then r.text:SetAlpha(1) end end
     end
 
     local function renderTeamRows(team, cache, anchorTitle, columnX)
@@ -1063,9 +1089,32 @@ local function buildPreviewPage(parent)
                 row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
                 row:SetScript("OnEnter", showRowTooltip)
                 row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+                row:SetScript("OnMouseDown", function(self, button)
+                    if button == "LeftButton" and self._entry then
+                        dragSource = self._entry
+                        clearDragVisuals()
+                        self.text:SetAlpha(0.5)
+                    end
+                end)
                 row:SetScript("OnMouseUp", function(self, button)
-                    if button == "RightButton" and self._entry then
-                        showLockMenu(self._entry)
+                    if button == "RightButton" then
+                        if self._entry then showLockMenu(self._entry) end
+                        return
+                    end
+                    if button == "LeftButton" then
+                        local source = dragSource
+                        dragSource = nil
+                        clearDragVisuals()
+                        if source and self._entry
+                           and source.name ~= self._entry.name
+                           and source.team ~= self._entry.team then
+                            -- Swap by locking both to their new teams. The
+                            -- pre-snake lock pass will place them; subsequent
+                            -- recomputes preserve the swap.
+                            SplitW:SetLock(source.name,     self._entry.team)
+                            SplitW:SetLock(self._entry.name, source.team)
+                            recomputeAndRefresh()
+                        end
                     end
                 end)
                 _registerInSection(row)
@@ -1075,6 +1124,7 @@ local function buildPreviewPage(parent)
             row:SetPoint("TOPLEFT", anchorTitle, "BOTTOMLEFT", 0, -10 - (i - 1) * 20)
             row._entry = e
             row.text:SetText(buildRowText(e, src))
+            row.text:SetAlpha(1)
             row:Show()
         end
         for i = #team + 1, #cache do cache[i]:Hide() end
@@ -1114,6 +1164,10 @@ local function buildPreviewPage(parent)
         CONSTRAINT_UNSWAPPABLE_MASS_DISPEL = ICON .. L["Couldn't swap to satisfy Mass Dispel."],
         CONSTRAINT_UNSWAPPABLE_DECURSE   = ICON .. L["Couldn't swap to satisfy Decurse."],
         CONSTRAINT_UNSWAPPABLE_MR        = ICON .. L["Couldn't fully balance melee/ranged ratio."],
+        CONSTRAINT_MISSING_EXTERNAL          = ICON .. L["No healer with an external defensive in the raid — constraint cannot be satisfied."],
+        CONSTRAINT_UNSWAPPABLE_EXTERNAL      = ICON .. L["Couldn't swap to satisfy external CDs (no compatible healer pair)."],
+        CONSTRAINT_MISSING_SOAK              = ICON .. L["No immunity class (Paladin / Mage / Hunter) in the raid — constraint cannot be satisfied."],
+        CONSTRAINT_UNSWAPPABLE_SOAK          = ICON .. L["Couldn't swap to satisfy soak immunity."],
     }
 
     -- Empty-state placeholder FontStrings under each title.
@@ -1320,6 +1374,9 @@ local function buildAboutPage(parent)
             L["• Fixed Decurse class list: Monk Detox doesn't remove curses; only Mage / Druid / Shaman do."],
             L["• Per-player tooltip on team-column rows showing class, role, DPS, HPS, manual weight, lock status."],
             L["• Composition tab rename (was 'Joueurs') — covers both Constraints and Manual weights more accurately."],
+            L["• Two new constraints: External CD healer per team (Pala/Priest/Druid/Monk filtered to HEALER role), Soak immunity per team (Pala/Mage/Hunter)."],
+            L["• Drag-and-drop swap on Preview team rows: left-click a name, then left-click any player on the OTHER team to swap them. Both auto-locked so the swap persists."],
+            L["• Movement indicator on Preview rows: orange arrow next to players whose team changed since the last Apply — spot recompute churn at a glance."],
         }},
         { ver = "0.2.0", date = "2026-05-12", lines = {
             L["• 0 required addons — Details!/Recount/Skada remain optional integrations alongside the new Item Level (inspect) source and the per-player Manual sliders."],
