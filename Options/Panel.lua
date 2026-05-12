@@ -1110,6 +1110,10 @@ local function buildPreviewPage(parent)
             if not row then
                 row = CreateFrame("Frame", nil, parent)
                 row:SetSize(320, 18)
+                -- Bump framelevel above whatever section.container layers
+                -- (header line / chevron / backdrop) might sit on so the
+                -- per-row text and mouse hits aren't shadowed.
+                row:SetFrameLevel((parent:GetFrameLevel() or 0) + 10)
                 row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
                 row.text:SetPoint("LEFT", row, "LEFT", 2, 0)
                 row.text:SetPoint("RIGHT", row, "RIGHT", -2, 0)
@@ -1297,10 +1301,12 @@ local function buildPreviewPage(parent)
 
         titleA:SetText(string.format("%s  |cffaaaaaa(%d)|r", baseA, #split.teamA))
         titleB:SetText(string.format("%s  |cffaaaaaa(%d)|r", baseB, #split.teamB))
-        renderTeamRows(split.teamA, rowsA, titleA, 14)
-        renderTeamRows(split.teamB, rowsB, titleB, 360)
+        -- Clamp empty placeholders FIRST so they don't visually shadow team
+        -- rows in case the section's SetCollapsed Show'd them at some point.
         if #split.teamA == 0 then emptyA:Show() else emptyA:Hide() end
         if #split.teamB == 0 then emptyB:Show() else emptyB:Hide() end
+        renderTeamRows(split.teamA, rowsA, titleA, 14)
+        renderTeamRows(split.teamB, rowsB, titleB, 360)
 
         -- Expand the page content frame so all team rows and the warnings line
         -- fit within the scroll viewport. The makePage deferred sizing only
