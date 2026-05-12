@@ -1023,12 +1023,29 @@ local function build()
     panel = CreateFrame("Frame", "SplitWatchOptionsPanel", UIParent, "PortraitFrameTemplate")
     panel:SetSize(720, 540)
     local db = SplitW:GetDB()
-    if db.panelPoint then
-        panel:SetPoint(db.panelPoint.point, UIParent, db.panelPoint.relPoint,
-                       db.panelPoint.x, db.panelPoint.y)
-    else
-        panel:SetPoint("CENTER")
+    -- Restore saved panel position, but validate it's still on-screen — moving
+    -- between monitors of different resolutions can leave saved offsets that
+    -- put the frame entirely off the viewport. If abs(x) or abs(y) exceeds
+    -- the current UIParent half-dimension, fall back to CENTER.
+    local function restorePosition()
+        if not db.panelPoint then
+            panel:SetPoint("CENTER"); return
+        end
+        local p = db.panelPoint
+        local sw = (UIParent and UIParent.GetWidth  and UIParent:GetWidth())  or 1920
+        local sh = (UIParent and UIParent.GetHeight and UIParent:GetHeight()) or 1080
+        -- Generous bounds: tolerate offsets up to a full screen away (the user
+        -- might have a wider workspace than current). Beyond that, the panel
+        -- is almost certainly invisible — reset to CENTER.
+        if math.abs(p.x or 0) > sw or math.abs(p.y or 0) > sh then
+            db.panelPoint = nil
+            panel:SetPoint("CENTER")
+            return
+        end
+        panel:SetPoint(p.point or "CENTER", UIParent, p.relPoint or p.point or "CENTER",
+                       p.x or 0, p.y or 0)
     end
+    restorePosition()
     panel:SetMovable(true)
     panel:SetClampedToScreen(true)
     panel:EnableMouse(true)
@@ -1311,13 +1328,22 @@ function SplitW:ShowOptionsAt(point, relPoint, x, y)
     if not panel then build() end
     SplitW._panel = panel
     if point then
-        panel:ClearAllPoints()
-        panel:SetPoint(point, UIParent, relPoint or point, x or 0, y or 0)
-        SplitW:GetDB().panelPoint = {
-            point = point, relPoint = relPoint or point,
-            x = math.floor((x or 0) + 0.5),
-            y = math.floor((y or 0) + 0.5),
-        }
+        local sw = (UIParent and UIParent.GetWidth  and UIParent:GetWidth())  or 1920
+        local sh = (UIParent and UIParent.GetHeight and UIParent:GetHeight()) or 1080
+        if math.abs(x or 0) > sw or math.abs(y or 0) > sh then
+            -- Sister addon handed us an off-screen position — clamp to CENTER.
+            panel:ClearAllPoints()
+            panel:SetPoint("CENTER")
+            SplitW:GetDB().panelPoint = nil
+        else
+            panel:ClearAllPoints()
+            panel:SetPoint(point, UIParent, relPoint or point, x or 0, y or 0)
+            SplitW:GetDB().panelPoint = {
+                point = point, relPoint = relPoint or point,
+                x = math.floor((x or 0) + 0.5),
+                y = math.floor((y or 0) + 0.5),
+            }
+        end
     end
     if panel.refreshAll then panel.refreshAll() end
     panel:Show()

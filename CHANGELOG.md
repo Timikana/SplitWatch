@@ -6,6 +6,12 @@ versionnage selon [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+### Ajouté
+- **Niveau d'objet (inspect)** comme 5ème source de poids — utilise l'API Blizzard `NotifyInspect` / `C_PaperDollInfo.GetInspectItemLevel`, aucun addon tiers requis. File d'inspect throttlée à 1.5s / requête, portée 28y, cache TTL 90s. Bouton **Scanner l'ilvl du raid** sur l'onglet Réglages.
+
+### Corrigé
+- **Récupération auto si la fenêtre est hors écran.** Si tu déplaces le panneau sur un grand moniteur puis relances WoW sur un plus petit (ou en fenêtré réduit), la position sauvegardée est validée contre les dimensions actuelles de `UIParent`. Si `|x|` ou `|y|` dépasse la largeur/hauteur de l'écran, le panneau est ramené au centre et la position sauvegardée est nettoyée. Idem pour le handoff entre addons jumeaux (`ShowOptionsAt`).
+
 ## [0.1.0] - 2026-05-11
 
 ### Ajouté
