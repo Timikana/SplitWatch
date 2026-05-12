@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(cp \"u:/WoW_SplitWatch/Options/Panel.lua\" \"G:/World of Warcraft/_retail_/Interface/AddOns/SplitWatch/Options/\")",
-      "Bash(cp \"u:/WoW_SplitWatch/Locales/frFR.lua\" \"G:/World of Warcraft/_retail_/Interface/AddOns/SplitWatch/Locales/\")",
-      "Bash(git -c user.name=Timikana -c user.email=10222830+Timikana@users.noreply.github.com commit -m 'Resizable main frame + logical re-org \\(Constraints → Joueurs\\) *)"
-    ]
-  }
-}

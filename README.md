@@ -5,6 +5,8 @@
 
   **Auto-split a 10–40 man raid into 2 balanced teams for split-mechanic encounters.**
 
+  [![CurseForge](https://img.shields.io/badge/CurseForge-SplitWatch-f16436)](https://www.curseforge.com/wow/addons/splitwatch)
+  [![Wago](https://img.shields.io/badge/Wago-SplitWatch-b371ff)](https://addons.wago.io/addons/splitwatch)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
   ![WoW Version](https://img.shields.io/badge/WoW-12.0%20Midnight-blue)
   ![MoP Classic](https://img.shields.io/badge/Classic-MoP%205.5-purple)

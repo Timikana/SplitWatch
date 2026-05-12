@@ -5,6 +5,8 @@
 ## Version: 0.2.0
 ## IconTexture: Interface\Icons\Achievement_PVP_A_A
 ## SavedVariables: SplitWatchDB
+## X-Curse-Project-ID: 1541355
+## X-Wago-ID: QNlzMEKe
 
 # Libs
 Libs\LibStub\LibStub.lua
