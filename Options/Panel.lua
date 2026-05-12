@@ -425,6 +425,9 @@ local function buildSetupPage(parent)
     markAsNew(makeCheck(parent, L["Broadcast team composition on Apply"], "broadcastOnApply",
         360, -40, L["Post the team rosters to chat when a split is applied."]),
         "broadcastOnApply")
+    markAsNew(makeCheck(parent, L["Auto-rebalance after manual swap"], "autoRebalanceAfterSwap",
+        360, -120, L["When OFF (default), a 2-click manual swap on Aperçu only moves those two players. When ON, the algorithm recomputes the entire split with the swapped pair locked, redistributing everyone else."]),
+        "autoRebalanceAfterSwap")
     local channels = {
         { text = L["Raid chat"],          value = "RAID"          },
         { text = L["Raid warning"],       value = "RAID_WARNING"  },
@@ -1183,12 +1186,59 @@ local function buildPreviewPage(parent)
                         self.text:SetAlpha(0.5)
                         return
                     end
-                    -- Different team → swap.
+                    -- Different team → swap. Default behaviour is a DIRECT
+                    -- in-place swap of just these two players: no recompute,
+                    -- so the rest of the raid stays put. RL can opt into the
+                    -- old "auto-rebalance after swap" behaviour via the
+                    -- Réglages toggle, which runs a full Splitter:Compute
+                    -- with both players locked so the snake redistributes
+                    -- everyone else.
                     dragSource = nil
                     clearDragVisuals()
                     SplitW:SetLock(source.name,     self._entry.team)
                     SplitW:SetLock(self._entry.name, source.team)
-                    recomputeAndRefresh()
+                    if SplitW:GetDB().autoRebalanceAfterSwap then
+                        recomputeAndRefresh()
+                        return
+                    end
+                    local split = SplitW:GetDB().lastSplit
+                    if split then
+                        local srcKey = (source.team == "A") and "teamA" or "teamB"
+                        local tgtKey = (self._entry.team == "A") and "teamA" or "teamB"
+                        local function pull(teamArr, name)
+                            for i, x in ipairs(teamArr) do
+                                if x.name == name then return table.remove(teamArr, i) end
+                            end
+                        end
+                        local s = pull(split[srcKey], source.name)
+                        local t = pull(split[tgtKey], self._entry.name)
+                        if s and t then
+                            s.team = (tgtKey == "teamA") and "A" or "B"
+                            t.team = (srcKey == "teamA") and "A" or "B"
+                            table.insert(split[tgtKey], s)
+                            table.insert(split[srcKey], t)
+                            -- Recount role/score totals so the After block,
+                            -- per-team counts in the title, and the warnings
+                            -- panel match the swapped composition.
+                            local function recount(team)
+                                local tk, hl, dp, sc, hs = 0, 0, 0, 0, 0
+                                for _, e in ipairs(team) do
+                                    if e.role == "TANK" then tk = tk + 1
+                                    elseif e.role == "HEALER" then
+                                        hl = hl + 1
+                                        hs = hs + (SplitW:GetEffectiveHPS(e) or 50)
+                                    else
+                                        dp = dp + 1
+                                        sc = sc + (SplitW:GetEffectiveWeight(e) or 50)
+                                    end
+                                end
+                                return tk, hl, dp, sc, hs
+                            end
+                            split.tanksA, split.healsA, split.dpsA, split.scoreA, split.healScoreA = recount(split.teamA)
+                            split.tanksB, split.healsB, split.dpsB, split.scoreB, split.healScoreB = recount(split.teamB)
+                        end
+                    end
+                    if parent.refresh then parent.refresh() end
                 end)
                 row:SetScript("OnMouseUp", function(self, button)
                     if button == "RightButton" then

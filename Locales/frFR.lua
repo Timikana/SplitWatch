@@ -248,6 +248,9 @@ L["Post the team rosters to chat when a split is applied."] =
 L["Broadcast channel"] = "Canal d'annonce"
 L["Where to post the team-rosters message when Broadcast is enabled."] =
     "Où poster le message de composition quand l'annonce est activée."
+L["Auto-rebalance after manual swap"] = "Recalculer auto après swap manuel"
+L["When OFF (default), a 2-click manual swap on Aperçu only moves those two players. When ON, the algorithm recomputes the entire split with the swapped pair locked, redistributing everyone else."] =
+    "Quand DÉSACTIVÉ (défaut), un swap manuel à 2 clics sur Aperçu ne déplace que ces deux joueurs. Quand ACTIVÉ, l'algo recalcule tout le split avec la paire échangée verrouillée, redistribuant tout le monde."
 L["Raid chat"]    = "Canal raid"
 L["Raid warning"] = "Avertissement raid"
 L["Party chat"]   = "Canal groupe"

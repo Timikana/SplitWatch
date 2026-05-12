@@ -37,6 +37,13 @@ SplitW.Defaults = {
     broadcastOnApply    = false,
     broadcastChannel    = "RAID",  -- RAID | RAID_WARNING | PARTY | SAY
 
+    -- When OFF (default): a manual swap (Aperçu 2-click) just exchanges the
+    -- two clicked players and locks them. When ON: the swap kicks off a full
+    -- recompute so the rest of the raid is re-snake-distributed against the
+    -- new locks. RL choice — most prefer the OFF behaviour because they
+    -- expect their click to move only those two players.
+    autoRebalanceAfterSwap = false,
+
     -- Named presets: { ["Spirit Kings"] = { config = {...}, locks = {...} } }
     presets             = {},
 
