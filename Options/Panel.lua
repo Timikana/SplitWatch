@@ -765,15 +765,17 @@ local function buildPreviewPage(parent)
     afterStatsFS:SetWidth(300); afterStatsFS:SetJustifyH("LEFT")
     _registerInSection(afterStatsFS)
 
-    -- Team A / Team B columns (after split)
+    -- Team A / Team B columns (after split). Width 320 to accommodate
+    -- long Name-Realm strings, SetSpacing for readable line gaps.
     local function makeTeamColumn(title, x)
         local titleFS = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         titleFS:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -200)
         titleFS:SetText(title)
         titleFS:SetTextColor(1, 0.82, 0)
         local listFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        listFS:SetPoint("TOPLEFT", titleFS, "BOTTOMLEFT", 0, -6)
-        listFS:SetWidth(300); listFS:SetJustifyH("LEFT")
+        listFS:SetPoint("TOPLEFT", titleFS, "BOTTOMLEFT", 0, -10)
+        listFS:SetWidth(320); listFS:SetJustifyH("LEFT")
+        listFS:SetSpacing(4)
         _registerInSection(titleFS)
         _registerInSection(listFS)
         return titleFS, listFS
@@ -806,23 +808,17 @@ local function buildPreviewPage(parent)
         UNEVEN_TEAMS = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeams differ by more than 1 player — score is balanced by giving the weakest DPS to the larger team."],
     }
 
-    local function fmtTeam(team, sum)
+    local function fmtTeam(team)
         if #team == 0 then return "|cff888888" .. L["(empty)"] .. "|r" end
         local lines = {}
-        local tanks, heals, dps = 0, 0, 0
         for _, e in ipairs(team) do
-            if e.role == "TANK" then tanks = tanks + 1
-            elseif e.role == "HEALER" then heals = heals + 1
-            else dps = dps + 1 end
             local r, g, b = classColor(e.class)
-            lines[#lines + 1] = string.format("%s |cff%02x%02x%02x%s|r",
-                roleIcon(e.role),
+            lines[#lines + 1] = string.format("%s  |cff%02x%02x%02x%s|r",
+                roleIcon(e.role, 16),
                 math.floor(r*255), math.floor(g*255), math.floor(b*255),
                 e.name)
         end
-        local header = string.format("|cffffd100[%d players: %dT %dH %dDPS — score %d]|r\n",
-            #team, tanks, heals, dps, math.floor(sum + 0.5))
-        return header .. table.concat(lines, "\n")
+        return table.concat(lines, "\n")
     end
 
     parent.refresh = function()
@@ -875,8 +871,8 @@ local function buildPreviewPage(parent)
             #split.teamB, split.tanksB, split.healsB, split.dpsB,
             math.floor(split.scoreB + 0.5), math.floor((split.healScoreB or 0) + 0.5)))
 
-        listA:SetText(fmtTeam(split.teamA, split.scoreA))
-        listB:SetText(fmtTeam(split.teamB, split.scoreB))
+        listA:SetText(fmtTeam(split.teamA))
+        listB:SetText(fmtTeam(split.teamB))
 
         if #split.warnings > 0 then
             local out = {}
