@@ -1146,7 +1146,15 @@ local function buildPreviewPage(parent)
                         end
                     end
                 end)
-                _registerInSection(row)
+                -- NOTE: deliberately NOT _registerInSection(row). These rows
+                -- are created lazily when the user clicks Compute, by which
+                -- time module-level _currentSection points at the last
+                -- section built across ALL pages (typically an About
+                -- section). Registering would reparent the row into that
+                -- foreign section's container — which is hidden on Aperçu
+                -- → rows disappear. Rows stay parented to the page content
+                -- frame directly, which Show/Hide cascades correctly with
+                -- the active tab.
                 cache[i] = row
             end
             row:ClearAllPoints()
