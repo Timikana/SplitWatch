@@ -88,6 +88,13 @@ local function classColor(class)
     return 0.8, 0.8, 0.8
 end
 
+local function fmtNum(v)
+    if not v or v <= 0 then return "|cff666666—|r" end
+    if v >= 1e6 then return string.format("%.2fM", v / 1e6) end
+    if v >= 1e3 then return string.format("%.1fk", v / 1e3) end
+    return string.format("%d", math.floor(v + 0.5))
+end
+
 local function roleIcon(role, size)
     size = size or 14
     if role == "TANK"   then return string.format("|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:%d:%d:0:0:64:64:0:19:22:41|t", size, size) end
@@ -466,13 +473,6 @@ local function buildSetupPage(parent)
     _registerInSection(previewScroll)
     local previewRows = {}
 
-    local function fmtNum(v)
-        if not v or v <= 0 then return "|cff666666—|r" end
-        if v >= 1e6 then return string.format("%.2fM", v / 1e6) end
-        if v >= 1e3 then return string.format("%.1fk", v / 1e3) end
-        return string.format("%d", math.floor(v + 0.5))
-    end
-
     local function refreshPreview()
         local roster = SplitW.Roster:Scan()
         local list, fromSource = {}, false
@@ -782,6 +782,7 @@ local function buildPreviewPage(parent)
     end
     local titleA, listA = makeTeamColumn(L["Team A"], 14)
     local titleB, listB = makeTeamColumn(L["Team B"], 360)
+    local baseA, baseB = L["Team A"], L["Team B"]
 
     -- Vertical separator between the two team columns (gold gradient).
     local sep = parent:CreateTexture(nil, "ARTWORK")
@@ -810,13 +811,25 @@ local function buildPreviewPage(parent)
 
     local function fmtTeam(team)
         if #team == 0 then return "|cff888888" .. L["(empty)"] .. "|r" end
+        local src = SplitW:GetDB().dpsSource
         local lines = {}
         for _, e in ipairs(team) do
             local r, g, b = classColor(e.class)
-            lines[#lines + 1] = string.format("%s  |cff%02x%02x%02x%s|r",
+            -- Per-player suffix: ilvl when ILVL source, otherwise DPS (k-format).
+            -- Always grey so the name stays the focal point.
+            local suffix = ""
+            local v = SplitW.DPSSource and SplitW.DPSSource:GetDPS(e.name)
+            if v and v > 0 then
+                if src == "ILVL" then
+                    suffix = string.format("  |cffaaaaaa[ilvl %d]|r", math.floor(v + 0.5))
+                else
+                    suffix = string.format("  |cffaaaaaa[%s]|r", fmtNum(v))
+                end
+            end
+            lines[#lines + 1] = string.format("%s  |cff%02x%02x%02x%s|r%s",
                 roleIcon(e.role, 16),
                 math.floor(r*255), math.floor(g*255), math.floor(b*255),
-                e.name)
+                e.name, suffix)
         end
         return table.concat(lines, "\n")
     end
@@ -857,20 +870,29 @@ local function buildPreviewPage(parent)
         local split = SplitW:GetDB().lastSplit
         if not split then
             afterStatsFS:SetText("|cff888888" .. L["No split computed yet — click 'Compute split'."] .. "|r")
-            listA:SetText("")
-            listB:SetText("")
+            titleA:SetText(baseA); titleB:SetText(baseB)
+            listA:SetText(""); listB:SetText("")
             warnFS:SetText("")
             return
         end
 
+        -- Two-line format symmetric with the "Before" block. HPS suffix only
+        -- appears when at least one team has heal data (otherwise it's noise).
+        local hsA = math.floor((split.healScoreA or 0) + 0.5)
+        local hsB = math.floor((split.healScoreB or 0) + 0.5)
+        local hpsPart = (hsA > 0 or hsB > 0)
+            and function(v) return string.format(" — HPS %d", v) end
+            or function() return "" end
         afterStatsFS:SetText(string.format(
-            "|cffffd100%s|r\n  A: %d (%dT %dH %dDPS)\n      DPS: %d  HPS: %d\n  B: %d (%dT %dH %dDPS)\n      DPS: %d  HPS: %d",
+            "|cffffd100%s|r\n  A: %d (%dT %dH %dDPS — DPS %d%s)\n  B: %d (%dT %dH %dDPS — DPS %d%s)",
             L["Proposed split"],
             #split.teamA, split.tanksA, split.healsA, split.dpsA,
-            math.floor(split.scoreA + 0.5), math.floor((split.healScoreA or 0) + 0.5),
+            math.floor(split.scoreA + 0.5), hpsPart(hsA),
             #split.teamB, split.tanksB, split.healsB, split.dpsB,
-            math.floor(split.scoreB + 0.5), math.floor((split.healScoreB or 0) + 0.5)))
+            math.floor(split.scoreB + 0.5), hpsPart(hsB)))
 
+        titleA:SetText(string.format("%s  |cffaaaaaa(%d)|r", baseA, #split.teamA))
+        titleB:SetText(string.format("%s  |cffaaaaaa(%d)|r", baseB, #split.teamB))
         listA:SetText(fmtTeam(split.teamA))
         listB:SetText(fmtTeam(split.teamB))
 
