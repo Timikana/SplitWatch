@@ -1302,6 +1302,15 @@ local function buildPreviewPage(parent)
         if #split.teamA == 0 then emptyA:Show() else emptyA:Hide() end
         if #split.teamB == 0 then emptyB:Show() else emptyB:Hide() end
 
+        -- Expand the page content frame so all team rows and the warnings line
+        -- fit within the scroll viewport. The makePage deferred sizing only
+        -- counts registered sections; team rows live outside that registry.
+        local rowCount = math.max(#split.teamA, #split.teamB, 5)
+        local needed = 260 + rowCount * 20 + 80  -- titles at -230 + N rows + warnings + margin
+        if parent.GetHeight and parent:GetHeight() < needed then
+            parent:SetHeight(needed)
+        end
+
         if #split.warnings > 0 then
             local out = {}
             for _, w in ipairs(split.warnings) do
