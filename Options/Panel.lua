@@ -425,13 +425,6 @@ local function buildSetupPage(parent)
     markAsNew(makeCheck(parent, L["Broadcast team composition on Apply"], "broadcastOnApply",
         360, -40, L["Post the team rosters to chat when a split is applied."]),
         "broadcastOnApply")
-    markAsNew(makeCheck(parent, L["Auto-rebalance after manual swap"], "autoRebalanceAfterSwap",
-        360, -120, L["When OFF (default), a 2-click manual swap on Aperçu only moves those two players. When ON, the algorithm recomputes the entire split with the swapped pair locked, redistributing everyone else."]),
-        "autoRebalanceAfterSwap")
-    markAsNew(makeSlider(parent, L["Test roster size"], "testRosterSize",
-        10, 40, 1, 360, -180, 240,
-        L["Number of simulated players when test mode is on. Tank/healer/DPS ratios scale automatically (e.g. 10-man → 2T+2H+6DPS, 25-man → 2T+5H+18DPS, 40-man → 3T+9H+28DPS)."]),
-        "testRosterSize")
     local channels = {
         { text = L["Raid chat"],          value = "RAID"          },
         { text = L["Raid warning"],       value = "RAID_WARNING"  },
@@ -947,15 +940,26 @@ local function buildPreviewPage(parent)
     end)
     parent._testBtnRefresh = function() testBtn:SetText(testLabel()) end
 
+    -- Options tied to the buttons above — placed right under them so RL
+    -- doesn't have to bounce to Réglages.
+    markAsNew(makeCheck(parent, L["Auto-rebalance after manual swap"],
+        "autoRebalanceAfterSwap", 14, -68,
+        L["When OFF (default), a 2-click manual swap only moves those two players. When ON, the algorithm recomputes the entire split with the swapped pair locked, redistributing everyone else."]),
+        "autoRebalanceAfterSwap")
+    markAsNew(makeSlider(parent, L["Test roster size"], "testRosterSize",
+        10, 40, 1, 342, -68, 200,
+        L["Number of simulated players when test mode is on. Tank/healer/DPS ratios scale automatically (e.g. 10-man → 2T+2H+6DPS, 25-man → 2T+5H+18DPS, 40-man → 3T+9H+28DPS)."]),
+        "testRosterSize")
+
     local modeFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    modeFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -68)
+    modeFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -108)
     modeFS:SetWidth(600); modeFS:SetJustifyH("LEFT")
     _registerInSection(modeFS)
 
     -- Which damage-meter source the algorithm is reading from. Visible on the
     -- Preview page so you don't have to bounce to Réglages to check.
     local srcFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    srcFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -86)
+    srcFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -126)
     srcFS:SetWidth(600); srcFS:SetJustifyH("LEFT")
     _registerInSection(srcFS)
 
@@ -963,7 +967,7 @@ local function buildPreviewPage(parent)
     -- the last successful Compute. RL clicks the inline button to recompute.
     local dirtyBanner = CreateFrame("Frame", nil, parent, "BackdropTemplate")
     dirtyBanner:SetSize(600, 28)
-    dirtyBanner:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -104)
+    dirtyBanner:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -144)
     dirtyBanner:SetBackdrop({
         bgFile   = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -991,18 +995,18 @@ local function buildPreviewPage(parent)
     -- BEFORE / AFTER label. Use a Blizzard texture inline for the arrow because
     -- the FRIZQT__ font doesn't include U+2192 → and renders it as an empty box.
     local ARROW_TEX = "|TInterface\\Buttons\\UI-SpellbookIcon-NextPage-Up:18:18:0:0|t"
-    local beforeFS = makeLabel(parent, "|cffaaaaaa" .. L["Before"] .. "|r", 14, -140, "GameFontNormalLarge")
-    local arrowFS  = makeLabel(parent, ARROW_TEX, 326, -142, "GameFontNormalLarge")
-    local afterFS  = makeLabel(parent, "|cffffd100" .. L["After"] .. "|r", 360, -140, "GameFontNormalLarge")
+    local beforeFS = makeLabel(parent, "|cffaaaaaa" .. L["Before"] .. "|r", 14, -180, "GameFontNormalLarge")
+    local arrowFS  = makeLabel(parent, ARROW_TEX, 326, -182, "GameFontNormalLarge")
+    local afterFS  = makeLabel(parent, "|cffffd100" .. L["After"] .. "|r", 360, -180, "GameFontNormalLarge")
 
     -- Stats lines
     local beforeStatsFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    beforeStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -166)
+    beforeStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -206)
     beforeStatsFS:SetWidth(300); beforeStatsFS:SetJustifyH("LEFT")
     _registerInSection(beforeStatsFS)
 
     local afterStatsFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    afterStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -166)
+    afterStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -206)
     afterStatsFS:SetWidth(300); afterStatsFS:SetJustifyH("LEFT")
     _registerInSection(afterStatsFS)
 
@@ -1011,7 +1015,7 @@ local function buildPreviewPage(parent)
     -- open the lock context menu and hover can show a per-player tooltip.
     local function makeTeamTitle(title, x)
         local titleFS = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-        titleFS:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -230)
+        titleFS:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -270)
         titleFS:SetText(title)
         titleFS:SetTextColor(1, 0.82, 0)
         _registerInSection(titleFS)
@@ -1273,8 +1277,8 @@ local function buildPreviewPage(parent)
 
     -- Vertical separator between the two team columns (gold gradient).
     local sep = parent:CreateTexture(nil, "ARTWORK")
-    sep:SetPoint("TOPLEFT",    parent, "TOPLEFT", 340, -230)
-    sep:SetPoint("BOTTOMLEFT", parent, "TOPLEFT", 340, -490)
+    sep:SetPoint("TOPLEFT",    parent, "TOPLEFT", 340, -270)
+    sep:SetPoint("BOTTOMLEFT", parent, "TOPLEFT", 340, -530)
     sep:SetWidth(1)
     sep:SetColorTexture(1, 0.82, 0, 0.5)
     _registerInSection(sep)
@@ -1284,7 +1288,7 @@ local function buildPreviewPage(parent)
     -- below the viewport (user scrolls). A BOTTOMLEFT anchor would track
     -- container.bottom, which moves as the team lists grow, so we avoid it.
     local warnFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    warnFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -500)
+    warnFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -540)
     warnFS:SetWidth(600); warnFS:SetJustifyH("LEFT")
     _registerInSection(warnFS)
 
@@ -1412,7 +1416,7 @@ local function buildPreviewPage(parent)
         -- fit within the scroll viewport. The makePage deferred sizing only
         -- counts registered sections; team rows live outside that registry.
         local rowCount = math.max(#split.teamA, #split.teamB, 5)
-        local needed = 260 + rowCount * 20 + 80  -- titles at -230 + N rows + warnings + margin
+        local needed = 300 + rowCount * 20 + 80  -- titles at -270 + N rows + warnings + margin
         if parent.GetHeight and parent:GetHeight() < needed then
             parent:SetHeight(needed)
         end
