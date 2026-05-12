@@ -21,6 +21,9 @@ versionnage selon [SemVer](https://semver.org/lang/fr/).
   - **Immunité soak par équipe** (Paladin / Mage / Hunter) — au moins une classe avec immunité complète aux dégâts (Bouclier divin / Bloc de glace / Aspect de la tortue) par équipe pour les mécaniques de soak.
 - **Drag-and-drop dans Aperçu** — clic gauche sur un nom dans une colonne équipe, puis clic gauche sur n'importe quel joueur de l'AUTRE équipe pour les échanger. Les deux sont auto-verrouillés pour que l'échange persiste à travers les recompute.
 - **Indicateur de mouvement** — flèche orange à côté des joueurs dont l'équipe a changé depuis le dernier Apply réussi. `lastAppliedSplit` tracké dans `SplitWatchDB` et comparé à chaque rendu.
+- **Bibliothèque de presets pré-packagée** — bouton **"Restaurer les presets"** sur Réglages → Presets charge des configs prêtes pour 4 fights de split connus : *Spirit Kings (MoP)*, *Lei Shen (MoP)*, *Council of Elders (MoP)*, *Conclave of Wind*. Chaque preset configure les contraintes selon la mécanique du fight (Mass Dispel + Decurse pour Spirit Kings, Soak immunités pour Lei Shen, etc.). RL peut éditer / supprimer comme tout autre preset.
+- **Bannière changement de roster** — l'event `GROUP_ROSTER_UPDATE` (quelqu'un join/leave) déclenche une bannière jaune sur Aperçu avec un bouton inline **"Recalculer"**. Le RL décide quand committer un nouveau split — pas d'auto-recompute, mais visibilité immédiate du roster stale.
+- **Popups de confirmation** sur les actions destructrices : *Tout déverrouiller*, *Réinitialiser tous les poids*, *Supprimer un preset*. Évite les pertes de données accidentelles via `StaticPopup_Show`.
 
 ### Corrigé
 - **Liste Battle Rez** — seuls Druide / DK / Démoniste ont une résurrection en combat. Hunter / Paladin / DH retirés du tag BR (faux positif qui faisait croire à l'algo qu'il avait une BR alors que non).

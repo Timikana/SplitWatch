@@ -163,6 +163,31 @@ L["• Drag-and-drop swap on Preview team rows: left-click a name, then left-cli
     "• Drag-and-drop dans Aperçu : clic gauche sur un nom puis clic gauche sur un joueur de l'AUTRE équipe pour les échanger. Les deux sont auto-verrouillés pour que l'échange persiste."
 L["• Movement indicator on Preview rows: orange arrow next to players whose team changed since the last Apply — spot recompute churn at a glance."] =
     "• Indicateur de mouvement dans Aperçu : flèche orange à côté des joueurs qui ont changé d'équipe depuis le dernier Apply — détecte le churn d'un coup d'œil."
+L["• Built-in preset library: 'Restore built-ins' button on Réglages → Presets loads ready-to-use configs for Spirit Kings, Lei Shen, Council of Elders, Conclave of Wind."] =
+    "• Bibliothèque de presets pré-packagée : bouton 'Restaurer les presets' sur Réglages → Presets charge des configs prêtes pour Spirit Kings, Lei Shen, Council of Elders, Conclave of Wind."
+L["• Roster-change banner: GROUP_ROSTER_UPDATE fired → yellow banner on Aperçu with inline Recompute button. RL decides when to commit a new split — no auto-recompute."] =
+    "• Bannière changement de roster : déclenchée par GROUP_ROSTER_UPDATE → bannière jaune sur Aperçu avec bouton Recalculer inline. Le RL décide quand committer un nouveau split — pas de recompute auto."
+L["• Confirmation popups on destructive actions: Clear all locks, Reset all weights, Delete preset. Avoids accidental data loss."] =
+    "• Popups de confirmation sur les actions destructrices : Tout déverrouiller, Réinitialiser les poids, Supprimer un preset. Évite les pertes de données accidentelles."
+
+-- Roster-change banner
+L["Roster changed since last compute."] = "Le roster a changé depuis le dernier calcul."
+L["Recompute"] = "Recalculer"
+L["Re-run the split with the updated roster."] = "Relance le split avec le roster actuel."
+
+-- Built-in presets
+L["Restore built-ins"] = "Restaurer les presets"
+L["Load the bundled split-fight presets (Spirit Kings, Lei Shen, Council, Conclave). Existing presets with the same name will be overwritten."] =
+    "Charge les presets pré-packagés (Spirit Kings, Lei Shen, Council, Conclave). Les presets existants du même nom seront écrasés."
+L["Load the built-in split-fight presets? Existing presets with the same name will be overwritten."] =
+    "Charger les presets pré-packagés ? Les presets existants du même nom seront écrasés."
+L["restored %d built-in presets"] = "%d presets pré-packagés restaurés"
+
+-- Destructive confirmations
+L["Remove every player lock?"] = "Retirer tous les verrouillages joueur ?"
+L["Reset every stored weight back to the default? This can't be undone."] =
+    "Réinitialiser tous les poids stockés à la valeur par défaut ? Action irréversible."
+L["Delete the preset '%s'?"] = "Supprimer le preset '%s' ?"
 L["• Damage meter sources: Details!, Recount, Skada, Manual — unavailable ones grey out in the dropdown."] =
     "• Sources de damage meter : Details!, Recount, Skada, Manuel — celles non installées sont grisées dans le dropdown."
 L["• Healers balanced by HPS (live read from the active source), DPS by damage."] =

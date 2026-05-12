@@ -278,6 +278,82 @@ function SplitW:ListPresets()
 end
 
 -- ============================================================
+-- BUILT-IN PRESETS — known split-mechanic fights, ready-to-load.
+-- Constraints tuned to what each fight typically demands. RL can edit /
+-- delete after import; they're imported as regular user presets.
+-- ============================================================
+SplitW.BUILTIN_PRESETS = {
+    ["Spirit Kings (MoP)"] = {
+        config = {
+            dpsSource          = "DETAILS",
+            constraintBR       = true,
+            constraintLust     = true,
+            constraintMR       = true,    -- Pinning Spear melee dispatch + Volley ranged
+            constraintMassDisp = true,    -- Maddened Shroud + Pillage stacks
+            constraintDecurse  = false,
+            constraintExternal = true,    -- tanks eat heavy melee + Cobalt Mine soaks
+            constraintSoak     = false,
+        },
+        locks = {},
+    },
+    ["Lei Shen (MoP)"] = {
+        config = {
+            dpsSource          = "DETAILS",
+            constraintBR       = true,
+            constraintLust     = true,
+            constraintMR       = true,    -- Static Shock chains target ranged
+            constraintMassDisp = false,
+            constraintDecurse  = false,
+            constraintExternal = true,
+            constraintSoak     = true,    -- Ball Lightning soaks need immunities
+        },
+        locks = {},
+    },
+    ["Council of Elders (MoP)"] = {
+        config = {
+            dpsSource          = "DETAILS",
+            constraintBR       = true,
+            constraintLust     = true,
+            constraintMR       = false,
+            constraintMassDisp = false,
+            constraintDecurse  = true,    -- Frostbite + Bone Spike de-curse
+            constraintExternal = true,
+            constraintSoak     = false,
+        },
+        locks = {},
+    },
+    ["Conclave of Wind"] = {
+        config = {
+            dpsSource          = "DETAILS",
+            constraintBR       = true,
+            constraintLust     = true,
+            constraintMR       = true,    -- platforms favour ranged sticky positioning
+            constraintMassDisp = false,
+            constraintDecurse  = false,
+            constraintExternal = true,
+            constraintSoak     = false,
+        },
+        locks = {},
+    },
+}
+
+-- Copy every built-in preset into db.presets, overwriting any existing user
+-- preset with the same name. RL can then edit or delete them like normal.
+function SplitW:RestoreBuiltinPresets()
+    local db = SplitW:GetDB()
+    db.presets = db.presets or {}
+    local n = 0
+    for name, payload in pairs(SplitW.BUILTIN_PRESETS) do
+        local snapshot = { config = {}, locks = {} }
+        for k, v in pairs(payload.config or {}) do snapshot.config[k] = v end
+        for k, v in pairs(payload.locks  or {}) do snapshot.locks[k]  = v end
+        db.presets[name] = snapshot
+        n = n + 1
+    end
+    return n
+end
+
+-- ============================================================
 -- SLASH COMMAND
 -- ============================================================
 SLASH_SPLITWATCH1 = "/splitw"
@@ -407,6 +483,7 @@ end
 local init = CreateFrame("Frame")
 init:RegisterEvent("PLAYER_LOGIN")
 init:RegisterEvent("PLAYER_REGEN_ENABLED")
+init:RegisterEvent("GROUP_ROSTER_UPDATE")
 init:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
         SplitW:GetDB()
@@ -416,5 +493,13 @@ init:SetScript("OnEvent", function(_, event)
         print(format(L["|cffffd100SplitWatch|r v%s loaded — type |cffffff00/splitw|r for options"], v))
     elseif event == "PLAYER_REGEN_ENABLED" then
         if SplitW.Apply and SplitW.Apply.OnCombatEnd then SplitW.Apply:OnCombatEnd() end
+    elseif event == "GROUP_ROSTER_UPDATE" then
+        -- Mark the current split as potentially stale. The Aperçu tab shows
+        -- a banner inviting the RL to Recompute; we don't auto-recompute
+        -- (RL decides when to commit a new split).
+        if SplitW:GetDB().lastSplit then
+            SplitW._rosterDirty = true
+            if SplitW.RefreshAll then SplitW:RefreshAll() end
+        end
     end
 end)

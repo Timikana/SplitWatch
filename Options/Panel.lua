@@ -606,6 +606,10 @@ local function buildSetupPage(parent)
         end
     end, L["Save the current configuration under the name in the box."])
 
+    local presetRestoreBtn = makeButton(parent, L["Restore built-ins"], 380, -650, 180, function()
+        StaticPopup_Show("SPLITWATCH_RESTORE_PRESETS")
+    end, L["Load the bundled split-fight presets (Spirit Kings, Lei Shen, Council, Conclave). Existing presets with the same name will be overwritten."])
+
     -- Scrollable list of saved presets with per-row Load + Delete buttons.
     local presetScroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
     presetScroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -682)
@@ -646,8 +650,8 @@ local function buildSetupPage(parent)
                 end
             end)
             row.delBtn:SetScript("OnClick", function()
-                SplitW:DeletePreset(n)
-                refreshPresetList()
+                local popup = StaticPopup_Show("SPLITWATCH_CONFIRM_DELETE_PRESET", n)
+                if popup then popup.data = n end
             end)
             row:Show()
         end
@@ -735,9 +739,7 @@ local function buildWeightsPage(parent)
     local locksEmpty
 
     local clearAllBtn = makeButton(parent, L["Clear all locks"], 14, -418, 160, function()
-        SplitW:ClearLocks()
-        if parent._refreshLocks then parent._refreshLocks() end
-        if SplitW.RefreshAll then SplitW:RefreshAll() end
+        StaticPopup_Show("SPLITWATCH_CONFIRM_CLEAR_LOCKS")
     end, L["Remove every player lock."])
 
     local function refreshLocks()
@@ -876,10 +878,7 @@ local function buildWeightsPage(parent)
     -- Action bar — below the scroll (TOPLEFT-anchored at a fixed Y rather than
     -- BOTTOMLEFT, so the chained section sizes them predictably).
     local resetBtn = makeButton(parent, L["Reset all weights"], 14, -800, 160, function()
-        local db = SplitW:GetDB()
-        local default = db.weightDefault or 50
-        for k in pairs(db.weights) do db.weights[k] = default end
-        populate()
+        StaticPopup_Show("SPLITWATCH_CONFIRM_RESET_WEIGHTS")
     end, L["Reset every stored weight back to the default value."])
 
     local refreshBtn = makeButton(parent, L["Refresh roster"], 182, -800, 160, function()
@@ -914,6 +913,7 @@ local function buildPreviewPage(parent)
     local computeBtn = makeButton(parent, L["Compute split"], 14, -38, 160, function()
         local r = SplitW.Roster:Scan()
         SplitW:GetDB().lastSplit = SplitW.Splitter:Compute(r)
+        SplitW._rosterDirty = false
         if parent.refresh then parent.refresh() end
     end, L["Read the current roster and run the snake-distribution algorithm."])
 
@@ -952,21 +952,50 @@ local function buildPreviewPage(parent)
     srcFS:SetWidth(600); srcFS:SetJustifyH("LEFT")
     _registerInSection(srcFS)
 
+    -- Roster-change banner: visible only when GROUP_ROSTER_UPDATE fired since
+    -- the last successful Compute. RL clicks the inline button to recompute.
+    local dirtyBanner = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    dirtyBanner:SetSize(600, 28)
+    dirtyBanner:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -104)
+    dirtyBanner:SetBackdrop({
+        bgFile   = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    dirtyBanner:SetBackdropColor(0.4, 0.3, 0.05, 0.6)
+    dirtyBanner:SetBackdropBorderColor(1, 0.82, 0, 0.8)
+    local dirtyText = dirtyBanner:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    dirtyText:SetPoint("LEFT", dirtyBanner, "LEFT", 8, 0)
+    dirtyText:SetText("|cffffd100" .. L["Roster changed since last compute."] .. "|r")
+    local dirtyBtn = CreateFrame("Button", nil, dirtyBanner, "UIPanelButtonTemplate")
+    dirtyBtn:SetSize(140, 22)
+    dirtyBtn:SetPoint("RIGHT", dirtyBanner, "RIGHT", -6, 0)
+    dirtyBtn:SetText(L["Recompute"])
+    dirtyBtn:SetScript("OnClick", function()
+        local r = SplitW.Roster:Scan()
+        SplitW:GetDB().lastSplit = SplitW.Splitter:Compute(r)
+        SplitW._rosterDirty = false
+        if parent.refresh then parent.refresh() end
+    end)
+    addTooltip(dirtyBtn, L["Re-run the split with the updated roster."])
+    dirtyBanner:Hide()
+    _registerInSection(dirtyBanner)
+
     -- BEFORE / AFTER label. Use a Blizzard texture inline for the arrow because
     -- the FRIZQT__ font doesn't include U+2192 → and renders it as an empty box.
     local ARROW_TEX = "|TInterface\\Buttons\\UI-SpellbookIcon-NextPage-Up:18:18:0:0|t"
-    local beforeFS = makeLabel(parent, "|cffaaaaaa" .. L["Before"] .. "|r", 14, -110, "GameFontNormalLarge")
-    local arrowFS  = makeLabel(parent, ARROW_TEX, 326, -112, "GameFontNormalLarge")
-    local afterFS  = makeLabel(parent, "|cffffd100" .. L["After"] .. "|r", 360, -110, "GameFontNormalLarge")
+    local beforeFS = makeLabel(parent, "|cffaaaaaa" .. L["Before"] .. "|r", 14, -140, "GameFontNormalLarge")
+    local arrowFS  = makeLabel(parent, ARROW_TEX, 326, -142, "GameFontNormalLarge")
+    local afterFS  = makeLabel(parent, "|cffffd100" .. L["After"] .. "|r", 360, -140, "GameFontNormalLarge")
 
     -- Stats lines
     local beforeStatsFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    beforeStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -136)
+    beforeStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -166)
     beforeStatsFS:SetWidth(300); beforeStatsFS:SetJustifyH("LEFT")
     _registerInSection(beforeStatsFS)
 
     local afterStatsFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    afterStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -136)
+    afterStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -166)
     afterStatsFS:SetWidth(300); afterStatsFS:SetJustifyH("LEFT")
     _registerInSection(afterStatsFS)
 
@@ -975,7 +1004,7 @@ local function buildPreviewPage(parent)
     -- open the lock context menu and hover can show a per-player tooltip.
     local function makeTeamTitle(title, x)
         local titleFS = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-        titleFS:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -200)
+        titleFS:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -230)
         titleFS:SetText(title)
         titleFS:SetTextColor(1, 0.82, 0)
         _registerInSection(titleFS)
@@ -1132,8 +1161,8 @@ local function buildPreviewPage(parent)
 
     -- Vertical separator between the two team columns (gold gradient).
     local sep = parent:CreateTexture(nil, "ARTWORK")
-    sep:SetPoint("TOPLEFT",    parent, "TOPLEFT", 340, -200)
-    sep:SetPoint("BOTTOMLEFT", parent, "TOPLEFT", 340, -450)
+    sep:SetPoint("TOPLEFT",    parent, "TOPLEFT", 340, -230)
+    sep:SetPoint("BOTTOMLEFT", parent, "TOPLEFT", 340, -490)
     sep:SetWidth(1)
     sep:SetColorTexture(1, 0.82, 0, 0.5)
     _registerInSection(sep)
@@ -1143,7 +1172,7 @@ local function buildPreviewPage(parent)
     -- below the viewport (user scrolls). A BOTTOMLEFT anchor would track
     -- container.bottom, which moves as the team lists grow, so we avoid it.
     local warnFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    warnFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -460)
+    warnFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -500)
     warnFS:SetWidth(600); warnFS:SetJustifyH("LEFT")
     _registerInSection(warnFS)
 
@@ -1183,15 +1212,22 @@ local function buildPreviewPage(parent)
     _registerInSection(emptyB)
 
     -- Recompute the split (re-runs Splitter with current locks / constraints)
-    -- and refresh the page. Used by the right-click lock menu.
+    -- and refresh the page. Used by the right-click lock menu + the
+    -- drag-and-drop swap path.
     recomputeAndRefresh = function()
         local r = SplitW.Roster:Scan()
         SplitW:GetDB().lastSplit = SplitW.Splitter:Compute(r)
+        SplitW._rosterDirty = false
         if parent.refresh then parent.refresh() end
     end
 
     parent.refresh = function()
         if parent._testBtnRefresh then parent._testBtnRefresh() end
+        if SplitW._rosterDirty and SplitW:GetDB().lastSplit then
+            dirtyBanner:Show()
+        else
+            dirtyBanner:Hide()
+        end
         local roster = SplitW.Roster:Scan()
         if SplitW.Roster:IsTestMode() then
             modeFS:SetText("|cffffd100" .. L["Test mode ON (20 simulated)"] .. "|r")
@@ -1275,6 +1311,51 @@ StaticPopupDialogs["SPLITWATCH_CONFIRM_APPLY"] = {
     button1 = ACCEPT or "Accept",
     button2 = CANCEL or "Cancel",
     OnAccept = function() SplitW.Apply:Run() end,
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+}
+StaticPopupDialogs["SPLITWATCH_RESTORE_PRESETS"] = {
+    text = L["Load the built-in split-fight presets? Existing presets with the same name will be overwritten."],
+    button1 = ACCEPT or "Accept",
+    button2 = CANCEL or "Cancel",
+    OnAccept = function()
+        local n = SplitW:RestoreBuiltinPresets()
+        print(format("|cffffd100SplitWatch:|r " .. L["restored %d built-in presets"], n))
+        if SplitW.RefreshAll then SplitW:RefreshAll() end
+    end,
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+}
+StaticPopupDialogs["SPLITWATCH_CONFIRM_CLEAR_LOCKS"] = {
+    text = L["Remove every player lock?"],
+    button1 = ACCEPT or "Accept",
+    button2 = CANCEL or "Cancel",
+    OnAccept = function()
+        SplitW:ClearLocks()
+        if SplitW.RefreshAll then SplitW:RefreshAll() end
+    end,
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+}
+StaticPopupDialogs["SPLITWATCH_CONFIRM_RESET_WEIGHTS"] = {
+    text = L["Reset every stored weight back to the default? This can't be undone."],
+    button1 = ACCEPT or "Accept",
+    button2 = CANCEL or "Cancel",
+    OnAccept = function()
+        local db = SplitW:GetDB()
+        local default = db.weightDefault or 50
+        for k in pairs(db.weights) do db.weights[k] = default end
+        if SplitW.RefreshAll then SplitW:RefreshAll() end
+    end,
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+}
+StaticPopupDialogs["SPLITWATCH_CONFIRM_DELETE_PRESET"] = {
+    text = L["Delete the preset '%s'?"],
+    button1 = ACCEPT or "Accept",
+    button2 = CANCEL or "Cancel",
+    OnAccept = function(self)
+        if self.data then
+            SplitW:DeletePreset(self.data)
+            if SplitW.RefreshAll then SplitW:RefreshAll() end
+        end
+    end,
     timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
 }
 
@@ -1377,6 +1458,9 @@ local function buildAboutPage(parent)
             L["• Two new constraints: External CD healer per team (Pala/Priest/Druid/Monk filtered to HEALER role), Soak immunity per team (Pala/Mage/Hunter)."],
             L["• Drag-and-drop swap on Preview team rows: left-click a name, then left-click any player on the OTHER team to swap them. Both auto-locked so the swap persists."],
             L["• Movement indicator on Preview rows: orange arrow next to players whose team changed since the last Apply — spot recompute churn at a glance."],
+            L["• Built-in preset library: 'Restore built-ins' button on Réglages → Presets loads ready-to-use configs for Spirit Kings, Lei Shen, Council of Elders, Conclave of Wind."],
+            L["• Roster-change banner: GROUP_ROSTER_UPDATE fired → yellow banner on Aperçu with inline Recompute button. RL decides when to commit a new split — no auto-recompute."],
+            L["• Confirmation popups on destructive actions: Clear all locks, Reset all weights, Delete preset. Avoids accidental data loss."],
         }},
         { ver = "0.2.0", date = "2026-05-12", lines = {
             L["• 0 required addons — Details!/Recount/Skada remain optional integrations alongside the new Item Level (inspect) source and the per-player Manual sliders."],
