@@ -98,8 +98,14 @@ L["Slash commands"] = "Commandes /slash"
 L["Reset window position"] = "Réinitialiser la position de la fenêtre"
 L["Reset the options window to its default center position."] = "Remet la fenêtre d'options au centre de l'écran."
 L["Changelog"] = "Historique"
-L["• Damage meter sources: Details!, Recount, Skada, Manual."] =
-    "• Sources de damage meter : Details!, Recount, Skada, Manuel."
+L["• 0 required addons — SplitWatch works standalone. Details!/Recount/Skada are optional for live DPS/HPS readings, otherwise Manual sliders are used."] =
+    "• 0 addon requis — SplitWatch fonctionne tout seul. Details!/Recount/Skada sont optionnels pour lire DPS/HPS en live, sinon les sliders Manuels sont utilisés."
+L["• Sister addon to BossWatch + TankWatch — shares the side-tab navigation, gold accent UI, and family colour palette."] =
+    "• Addon jumeau de BossWatch + TankWatch — partage la navigation par side-tabs, l'UI à accent doré, et la palette de couleurs de la famille."
+L["• Initial release: snake-distribution algorithm, preview pane with before/after stats, permission-gated Apply via SetRaidSubgroup."] =
+    "• Version initiale : algorithme de distribution en serpent, aperçu avec stats avant/après, application protégée via SetRaidSubgroup."
+L["• Damage meter sources: Details!, Recount, Skada, Manual — unavailable ones grey out in the dropdown."] =
+    "• Sources de damage meter : Details!, Recount, Skada, Manuel — celles non installées sont grisées dans le dropdown."
 L["• Healers balanced by HPS (live read from the active source), DPS by damage."] =
     "• Heals équilibrés selon le HPS (lecture live depuis la source active), DPS selon les dégâts."
 L["• Supports raids from 10 to 40 members — subgroups assigned dynamically."] =

@@ -971,10 +971,12 @@ local function buildAboutPage(parent)
     makeSection(parent, L["Changelog"], 14, -400, "about.changelog")
     local entries = {
         { ver = "0.1.0", date = "2026-05-11", lines = {
-            L["• Initial release: manual weight mode, snake-distribution algorithm, preview pane with before/after stats, permission-gated Apply via SetRaidSubgroup."],
+            L["• 0 required addons — SplitWatch works standalone. Details!/Recount/Skada are optional for live DPS/HPS readings, otherwise Manual sliders are used."],
+            L["• Sister addon to BossWatch + TankWatch — shares the side-tab navigation, gold accent UI, and family colour palette."],
+            L["• Initial release: snake-distribution algorithm, preview pane with before/after stats, permission-gated Apply via SetRaidSubgroup."],
             L["• Supports retail 12.x and MoP Classic 5.5."],
             L["• Test mode (/splitw test) for UI preview without a raid."],
-            L["• Damage meter sources: Details!, Recount, Skada, Manual."],
+            L["• Damage meter sources: Details!, Recount, Skada, Manual — unavailable ones grey out in the dropdown."],
             L["• Healers balanced by HPS (live read from the active source), DPS by damage."],
             L["• Supports raids from 10 to 40 members — subgroups assigned dynamically."],
             L["• Collapsible sections with per-section reset, persisted across reloads."],
