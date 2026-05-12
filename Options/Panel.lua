@@ -1108,7 +1108,9 @@ local function buildPreviewPage(parent)
         for i, e in ipairs(team) do
             local row = cache[i]
             if not row then
-                row = CreateFrame("Frame", nil, parent)
+                -- Button (not Frame): RegisterForClicks is a Button-only API.
+                -- Plain Frames raise 'attempt to call a nil value' on it.
+                row = CreateFrame("Button", nil, parent)
                 row:SetSize(320, 18)
                 -- Bump framelevel above whatever section.container layers
                 -- (header line / chevron / backdrop) might sit on so the
