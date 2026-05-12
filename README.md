@@ -3,11 +3,14 @@
 
   # SplitWatch
 
-  **Auto-split a 10-40 man raid into 2 balanced teams for split-mechanic encounters.**
+  **Auto-split a 10–40 man raid into 2 balanced teams for split-mechanic encounters.**
 
+  [![CurseForge](https://img.shields.io/badge/CurseForge-SplitWatch-f16436)](https://www.curseforge.com/wow/addons/splitwatch)
+  [![Wago](https://img.shields.io/badge/Wago-SplitWatch-b371ff)](https://addons.wago.io/addons/splitwatch)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
   ![WoW Version](https://img.shields.io/badge/WoW-12.0%20Midnight-blue)
   ![MoP Classic](https://img.shields.io/badge/Classic-MoP%205.5-purple)
+  ![Standalone](https://img.shields.io/badge/Deps-0%20required-brightgreen)
 </div>
 
 ---
@@ -16,28 +19,35 @@
 > **Sources de poids disponibles :**
 > - **Details! / Recount / Skada** — DPS + HPS live (le plus précis, recommandé)
 > - **Item Level (inspect)** — pas besoin d'addon tiers, utilise l'API Blizzard `NotifyInspect`. Inspecte chaque membre du raid (~1.5s par joueur, portée 28y)
-> - **Manuel** — sliders 1-100 par joueur sur l'onglet **Joueurs**
+> - **Manuel** — sliders 1–100 par joueur sur l'onglet **Joueurs**
 >
 > Si aucun damage meter n'est chargé, le mode **Item Level** est un excellent fallback sans dépendance — il classe les joueurs par stuff plutôt que par performance, mais reste bien plus informatif que des poids manuels uniformes.
 
 ## What it does
 
-SplitWatch reads your raid roster, runs a snake-distribution algorithm balanced across **tanks, healers (by HPS) and DPS (by damage)**, and reassigns subgroups in one click via `SetRaidSubgroup`. Made for split-mechanic boss fights — Spirit Kings (MoP), and any other encounter that asks the raid to fight as two halves.
+SplitWatch reads your raid roster, runs a snake-distribution algorithm balanced across **tanks, healers (by HPS) and DPS (by damage)**, then applies optional **team-composition constraints** (battle-rez per team, Bloodlust per team, melee/ranged ratio, dispels…), and finally reassigns subgroups in one click via `SetRaidSubgroup`. Made for split-mechanic boss fights — Spirit Kings (MoP), and any other encounter that asks the raid to fight as two halves.
 
-**0 required addons** — SplitWatch works standalone. Details!, Recount, and Skada are optional integrations: when loaded, the algorithm reads live DPS+HPS from them instead of the manual sliders.
+**0 required addons** — SplitWatch works standalone. Details!, Recount, and Skada are optional integrations: when loaded, the algorithm reads live DPS+HPS from them. Item Level mode uses Blizzard's inspect API for a zero-dependency stat-based ranking.
 
 **Sister addon to [BossWatch](https://github.com/Timikana/BossWatch) and TankWatch** — shares side-tab navigation, gold-accent UI, and the family colour palette. Click between the three from the left edge of any panel.
 
 ## Features
 
-- **Roster scanner** — reads your raid via `GetRaidRosterInfo` + `UnitGroupRolesAssigned`, infers role (TANK/HEALER/DAMAGER) and class
+- **Roster scanner** — reads your raid via `GetRaidRosterInfo` + `UnitGroupRolesAssigned`, infers role (TANK / HEALER / DAMAGER) and class
 - **Snake-distribution algorithm** — tanks alternate, healers snake-distribute by HPS, DPS snake-distribute by damage; weakest player fills the gap on the larger team for uneven raids
+- **Team-composition constraints** (Raid-Leader toggle, applied AFTER the snake distribution with minimal-disruption swaps):
+  - ☑ Battle Rez per team — Druid / DK / Warlock / Hunter / Paladin / DH *(default ON)*
+  - ☑ Bloodlust per team — Shaman / Mage / Hunter / Evoker *(default ON)*
+  - ☐ Balance melee vs ranged (class-based heuristic)
+  - ☐ Mass Dispel per team — Priest
+  - ☐ Decurse per team — Mage / Druid / Shaman / Monk
 - **10-to-40 man support** — subgroups assigned dynamically (1 vs 2 / 1+2 vs 3+4 / 1+2+3 vs 4+5+6 / 1+2+3+4 vs 5+6+7+8)
-- **Damage meter integration** — Details!, Recount, Skada or Manual sliders; unavailable sources are greyed out in the dropdown
-- **Live source preview** — verify your meter is hooked up by seeing the live DPS/HPS values for every roster member (or for all tracked actors when solo)
-- **Before / after preview** — see each team's tank count, healer count, DPS count, total DPS score and total HPS score before applying
-- **Permission-gated Apply** — only leader/assistant can mass-move; combat-locked calls deferred until `PLAYER_REGEN_ENABLED`
-- **Tabbed options panel** with collapsible sections, per-section reset button, page-level scrolling
+- **Five weight sources** — Details!, Recount, Skada, Item Level (inspect), Manual sliders. Unavailable sources are greyed out and disabled in the dropdown.
+- **Live source preview** — verify your damage meter is feeding data **before** computing a split; shows live DPS/HPS values for every roster member (or for all tracked actors when solo)
+- **Before / after preview** — see each team's tank count, healer count, DPS count, total DPS score and total HPS score before applying. Per-player suffix (`[ilvl 432]` or `[245.6k]`) next to each name.
+- **Permission-gated Apply** — only leader/assistant can mass-move; combat-locked `SetRaidSubgroup` calls deferred until `PLAYER_REGEN_ENABLED`
+- **Resizable options panel** — drag the bottom-right grip; size + position persisted account-wide and clamped to current screen at load
+- **Tabbed options panel** with collapsible sections, per-section reset button, page-level scrolling, Escape-to-close
 - Built-in **test mode** (simulated 20-man roster) to preview the UI without a real raid
 - **Multi-toc** — single zip installs on Retail 12.x AND MoP Classic 5.5
 
@@ -45,7 +55,7 @@ SplitWatch reads your raid roster, runs a snake-distribution algorithm balanced 
 
 ### Manual
 1. Download the latest release from the [Releases page](https://github.com/Timikana/SplitWatch/releases)
-2. Extract the `SplitWatch` folder into `World of Warcraft/_retail_/Interface/AddOns/` (or `_classic_/Interface/AddOns/` for MoP)
+2. Extract the `SplitWatch` folder into `World of Warcraft/_retail_/Interface/AddOns/` (or `_classic_/Interface/AddOns/` for MoP Classic)
 3. Restart WoW or `/reload`
 
 ## Slash commands
@@ -54,7 +64,7 @@ SplitWatch reads your raid roster, runs a snake-distribution algorithm balanced 
 |---|---|
 | `/splitw` | Open the options panel |
 | `/splitw preview` | Compute the split and show the preview |
-| `/splitw apply` | Apply the current split via `SetRaidSubgroup` (leader/assist only) |
+| `/splitw apply` | Apply the current split via `SetRaidSubgroup` (leader / assist only) |
 | `/splitw test` | Toggle a simulated 20-man roster for UI testing |
 | `/splitw reset` | Wipe all settings and reload the UI |
 
@@ -64,19 +74,31 @@ SplitWatch reads your raid roster, runs a snake-distribution algorithm balanced 
 
 Open with `/splitw`. Tabs:
 
-- **Setup** — minimap icon, confirm-before-apply, summary-on-apply, auto-refresh, DPS source picker, live source preview, permission status
-- **Players** — per-player weight sliders (1-100), role icon + class colour, reset all weights, refresh roster, toggle test mode
-- **Preview** — Before/After stats, Team A / Team B columns with names, warnings (uneven teams, missing tank, oversize team), one-click Apply
-- **About** — addon info, slash commands list, panel opacity, reset window position, full changelog
+- **Réglages (Setup)** — general toggles (minimap icon, confirm-before-apply, summary-on-apply, auto-refresh), DPS source picker with **live preview** + Item Level scanner button, permission status
+- **Joueurs (Players)** — team-composition **Constraints** (5 toggles described above) + per-player Manual weight sliders (1–100)
+- **Aperçu (Preview)** — Compute / Apply / Toggle test buttons, source-used line, Before/After stats blocks, Team A / Team B columns with names + ilvl/DPS suffix, warnings panel (uneven teams, missing tank, unsatisfied constraint…)
+- **À propos (About)** — logo + version + author, slash commands list, panel opacity slider, reset window position, full changelog
 
 ## How the split works
 
-1. **Tanks** are alternated 1→A, 2→B, 3→A, … so each team has at least one
-2. **Healers** are sorted by HPS descending, then snake-distributed (each healer goes to whichever team has the lower total healing score so far)
-3. **DPS** are sorted by damage descending, then snake-distributed the same way
-4. **Uneven raids** (e.g. 11-man): the weakest player ends up on the larger team — score stays balanced even when player counts differ
+1. **Tanks** alternated 1→A, 2→B, 3→A … so each team has at least one
+2. **Healers** sorted by HPS descending, snake-distributed (each healer goes to whichever team has the lower healing score so far)
+3. **DPS** sorted by damage descending, snake-distributed the same way
+4. **Size rebalance**: if |#A − #B| > 1, the weakest DPS migrates to the smaller team until the gap is ≤ 1
+5. **Constraint pass**: for each enabled constraint, if one team lacks a matching class, swap the closest-score DPS pair to satisfy the rule. The melee/ranged equaliser swaps melee↔ranged DPS until counts differ by ≤ 1.
 
-Apply pushes everyone to their target subgroup with a 150ms throttle. If you're in combat, the queue waits for `PLAYER_REGEN_ENABLED`.
+Apply pushes everyone to their target subgroup with a 150 ms throttle. If you're in combat, the queue waits for `PLAYER_REGEN_ENABLED` (Blizzard combat-locks `SetRaidSubgroup` since patch 4.0.1).
+
+## Optional integrations
+
+| Addon | What it provides |
+|---|---|
+| [Details!](https://www.curseforge.com/wow/addons/details) | Live DPS + HPS via `combat:GetActorList(1 / 2)` |
+| [Recount](https://www.curseforge.com/wow/addons/recount) | Live DPS + HPS via `Recount.db2.combats[cur].Fight` |
+| [Skada](https://www.curseforge.com/wow/addons/skada) | Live DPS + HPS via `Skada.current.players` |
+| Blizzard inspect API | Average item level via `NotifyInspect` + `C_PaperDollInfo.GetInspectItemLevel` — built-in, no third-party addon needed |
+
+Without any of the above, the algorithm uses the per-player weight sliders on the Joueurs tab (default value 50 / 100).
 
 ## Localization
 
@@ -87,16 +109,6 @@ Apply pushes everyone to their target subgroup with a 150ms throttle. If you're 
 | German / Spanish / Italian / Portuguese | ⌛ Placeholder |
 
 Want to contribute another locale? Copy `Locales/frFR.lua`, change the `GetLocale()` check, translate the values, and open a PR.
-
-## Optional integrations
-
-| Addon | What it provides |
-|---|---|
-| [Details!](https://www.curseforge.com/wow/addons/details) | Live DPS + HPS via `combat:GetActorList(1/2)` |
-| [Recount](https://www.curseforge.com/wow/addons/recount) | Live DPS + HPS via `Recount.db2.combats[cur].Fight` |
-| [Skada](https://www.curseforge.com/wow/addons/skada) | Live DPS + HPS via `Skada.current.players` |
-
-Without any of those, the algorithm uses the per-player weight sliders on the Players tab (defaults to 50 / 100).
 
 ## Bundled libraries
 

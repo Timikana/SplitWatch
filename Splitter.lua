@@ -14,6 +14,49 @@ local function resolveHealWeight(entry)
 end
 
 -- ============================================================
+-- CONSTRAINT DEFINITIONS — keyed into SplitW:GetDB().constraint*.
+-- Each rule provides a class set; the resolver pass swaps minimally to
+-- guarantee both teams have at least one matching class. Melee/ranged
+-- is handled separately because it's a ratio, not a presence check.
+-- ============================================================
+Splitter.CONSTRAINTS = {
+    { dbKey = "constraintBR",       id = "BR",
+      classes = { DRUID = true, DEATHKNIGHT = true, WARLOCK = true,
+                  HUNTER = true, PALADIN = true, DEMONHUNTER = true } },
+    { dbKey = "constraintLust",     id = "LUST",
+      classes = { SHAMAN = true, MAGE = true, HUNTER = true, EVOKER = true } },
+    { dbKey = "constraintMassDisp", id = "MASS_DISPEL",
+      classes = { PRIEST = true } },
+    { dbKey = "constraintDecurse",  id = "DECURSE",
+      classes = { MAGE = true, DRUID = true, SHAMAN = true, MONK = true } },
+}
+
+-- Class → default attack range (approximate; the most common DPS spec).
+-- An entry can override this by setting entry.attackRange directly (e.g.
+-- via inspect spec when the DPSSource ilvl scan also captures spec).
+Splitter.CLASS_RANGE = {
+    ROGUE       = "MELEE",   WARRIOR     = "MELEE",
+    DEATHKNIGHT = "MELEE",   DEMONHUNTER = "MELEE",
+    MONK        = "MELEE",   PALADIN     = "MELEE",
+    MAGE        = "RANGED",  WARLOCK     = "RANGED",
+    EVOKER      = "RANGED",  PRIEST      = "RANGED",
+    HUNTER      = "RANGED",
+    DRUID       = "RANGED",  -- Balance more common as DPS
+    SHAMAN      = "RANGED",  -- Elemental more common as DPS
+}
+
+local function entryRange(entry)
+    return entry.attackRange or Splitter.CLASS_RANGE[entry.class] or "MELEE"
+end
+
+local function teamHasClass(team, classSet)
+    for _, e in ipairs(team) do
+        if classSet[e.class] then return true end
+    end
+    return false
+end
+
+-- ============================================================
 -- COMPUTE
 -- roster: { tanks={}, healers={}, dps={}, raid=N }
 -- Returns: { teamA = {entries}, teamB = {entries},
@@ -75,6 +118,141 @@ function Splitter:Compute(roster)
         else
             d.team = "B"
             table.insert(B, d); dpsB = dpsB + 1; sumB = sumB + w
+        end
+    end
+
+    -- Size rebalance pass — the per-role snake distribution can produce
+    -- uneven team sizes when role counts are odd (e.g. 2T + 1H + 17DPS = 20
+    -- → 1T+1H+9DPS = 11 vs 1T+0H+8DPS = 9, a gap of 2). For an even raid we
+    -- want a 0-gap split, for an odd raid we tolerate a 1-gap. Move the
+    -- weakest DPS from the larger team to the smaller one until the gap is
+    -- ≤ 1. Picking the weakest minimises the score-balance disruption.
+    local function _moveWeakestDps(fromTeam, fromIsA)
+        for i = #fromTeam, 1, -1 do
+            local e = fromTeam[i]
+            if e.role ~= "TANK" and e.role ~= "HEALER" then
+                table.remove(fromTeam, i)
+                local w = resolveDmgWeight(e)
+                if fromIsA then
+                    table.insert(B, e); e.team = "B"
+                    sumA = sumA - w; sumB = sumB + w
+                    dpsA = dpsA - 1; dpsB = dpsB + 1
+                else
+                    table.insert(A, e); e.team = "A"
+                    sumB = sumB - w; sumA = sumA + w
+                    dpsB = dpsB - 1; dpsA = dpsA + 1
+                end
+                return true
+            end
+        end
+        return false
+    end
+    while math.abs(#A - #B) > 1 do
+        if not _moveWeakestDps(#A > #B and A or B, #A > #B) then break end
+    end
+
+    -- Constraint resolver pass. Each toggled constraint either runs a
+    -- presence check (class set in CONSTRAINTS) or the melee/ranged ratio.
+    -- Swap candidates with similar DPS scores so the balance doesn't tank.
+    local db = SplitW:GetDB()
+
+    -- Swap a DPS entry of (sourceTeam, lookingForClasses) with a DPS entry
+    -- in (lackingTeam) that does NOT match the classes. Pick the swap that
+    -- minimises |scoreA - scoreB| change.
+    local function ensurePresence(constraint)
+        local hasA = teamHasClass(A, constraint.classes)
+        local hasB = teamHasClass(B, constraint.classes)
+        if hasA and hasB then return true end
+        if not hasA and not hasB then
+            table.insert(warnings, "CONSTRAINT_MISSING_" .. constraint.id)
+            return false
+        end
+        local lacking      = hasA and B or A
+        local lackingIsA   = not hasA
+        local source       = hasA and A or B
+        local bestI, bestJ, bestDelta
+        for i, candidate in ipairs(source) do
+            if candidate.role == "DAMAGER" and constraint.classes[candidate.class] then
+                for j, target in ipairs(lacking) do
+                    if target.role == "DAMAGER"
+                       and not constraint.classes[target.class] then
+                        local wc = resolveDmgWeight(candidate)
+                        local wt = resolveDmgWeight(target)
+                        -- Score delta on `lacking`: gains wc, loses wt → +(wc-wt)
+                        local delta = math.abs((sumA - sumB)
+                            + (lackingIsA and (wc - wt) or -(wc - wt)))
+                        if not bestDelta or delta < bestDelta then
+                            bestDelta, bestI, bestJ = delta, i, j
+                        end
+                    end
+                end
+            end
+        end
+        if not bestI then
+            table.insert(warnings, "CONSTRAINT_UNSWAPPABLE_" .. constraint.id)
+            return false
+        end
+        local cand, targ = source[bestI], lacking[bestJ]
+        source[bestI], lacking[bestJ] = targ, cand
+        cand.team, targ.team = (lackingIsA and "A" or "B"), (lackingIsA and "B" or "A")
+        local wc, wt = resolveDmgWeight(cand), resolveDmgWeight(targ)
+        if lackingIsA then
+            sumA = sumA + (wc - wt); sumB = sumB + (wt - wc)
+        else
+            sumB = sumB + (wc - wt); sumA = sumA + (wt - wc)
+        end
+        return true
+    end
+
+    for _, c in ipairs(Splitter.CONSTRAINTS) do
+        if db[c.dbKey] then ensurePresence(c) end
+    end
+
+    -- Melee/ranged equalisation — count DPS-only, then swap until |diff| ≤ 1.
+    local function countMelee(team)
+        local m = 0
+        for _, e in ipairs(team) do
+            if e.role == "DAMAGER" and entryRange(e) == "MELEE" then m = m + 1 end
+        end
+        return m
+    end
+    if db.constraintMR then
+        local guard = 0
+        while guard < 20 do
+            guard = guard + 1
+            local mA, mB = countMelee(A), countMelee(B)
+            if math.abs(mA - mB) <= 1 then break end
+            local fromTeam, fromIsA = (mA > mB) and A or B, mA > mB
+            local toTeam = fromIsA and B or A
+            -- Find a melee in source + a ranged in target with similar score.
+            local bestI, bestJ, bestDelta
+            for i, src in ipairs(fromTeam) do
+                if src.role == "DAMAGER" and entryRange(src) == "MELEE" then
+                    for j, tgt in ipairs(toTeam) do
+                        if tgt.role == "DAMAGER" and entryRange(tgt) == "RANGED" then
+                            local ws, wt = resolveDmgWeight(src), resolveDmgWeight(tgt)
+                            local delta = math.abs((sumA - sumB)
+                                + (fromIsA and (wt - ws) or (ws - wt)))
+                            if not bestDelta or delta < bestDelta then
+                                bestDelta, bestI, bestJ = delta, i, j
+                            end
+                        end
+                    end
+                end
+            end
+            if not bestI then
+                table.insert(warnings, "CONSTRAINT_UNSWAPPABLE_MR")
+                break
+            end
+            local s, t = fromTeam[bestI], toTeam[bestJ]
+            fromTeam[bestI], toTeam[bestJ] = t, s
+            s.team, t.team = fromIsA and "B" or "A", fromIsA and "A" or "B"
+            local ws, wt = resolveDmgWeight(s), resolveDmgWeight(t)
+            if fromIsA then
+                sumA = sumA + (wt - ws); sumB = sumB + (ws - wt)
+            else
+                sumB = sumB + (wt - ws); sumA = sumA + (ws - wt)
+            end
         end
     end
 

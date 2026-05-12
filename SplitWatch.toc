@@ -2,10 +2,12 @@
 ## Title: SplitWatch
 ## Notes: Auto-split a 20-man raid into 2 balanced teams (tanks/healers/DPS) for split-mechanic fights
 ## Author: Timikana
-## Version: 0.1.0
+## Version: 0.2.0
 ## IconTexture: Interface\Icons\Achievement_PVP_A_A
 ## SavedVariables: SplitWatchDB
 ## AllowAddOnTableAccess: 1
+## X-Curse-Project-ID: 1541355
+## X-Wago-ID: QNlzMEKe
 
 # Libs
 Libs\LibStub\LibStub.lua

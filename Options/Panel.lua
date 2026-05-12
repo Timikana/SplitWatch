@@ -88,6 +88,13 @@ local function classColor(class)
     return 0.8, 0.8, 0.8
 end
 
+local function fmtNum(v)
+    if not v or v <= 0 then return "|cff666666—|r" end
+    if v >= 1e6 then return string.format("%.2fM", v / 1e6) end
+    if v >= 1e3 then return string.format("%.1fk", v / 1e3) end
+    return string.format("%d", math.floor(v + 0.5))
+end
+
 local function roleIcon(role, size)
     size = size or 14
     if role == "TANK"   then return string.format("|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:%d:%d:0:0:64:64:0:19:22:41|t", size, size) end
@@ -435,8 +442,8 @@ local function buildSetupPage(parent)
     end
     statusFS:refresh()
 
-    -- Refresh-ilvl button — kicks off an inspect sweep of the raid. Useful
-    -- mostly when the ILVL source is selected, but works any time.
+    -- Refresh-ilvl button — only active when the ILVL source is selected
+    -- (the inspect cache feeds only that source, no point scanning otherwise).
     local refreshIlvlBtn = makeButton(parent, L["Scan raid ilvl"], 260, -230, 140, function()
         if SplitW.DPSSource and SplitW.DPSSource.RefreshIlvl then
             SplitW.DPSSource:RefreshIlvl()
@@ -445,16 +452,20 @@ local function buildSetupPage(parent)
                 statusFS:refresh()
             end)
         end
-    end, L["Inspect every raid member to fetch their average item level. Each inspect is ~1.5s and limited to a 28-yard range."])
+    end, L["Inspect every raid member to fetch their average item level. Each inspect is ~1.5s and limited to a 28-yard range. Active only when the Item Level source is selected."])
+    parent._syncIlvlBtn = function()
+        refreshIlvlBtn:SetEnabled(SplitW:GetDB().dpsSource == "ILVL")
+    end
+    parent._syncIlvlBtn()
     -- makeLabel already registered statusFS — but only since the recent factory change.
     -- Defensive: re-register isn't needed.
 
-    -- ---- Source preview (live read of DPS+HPS for the current roster) ----
-    local sourcePrevSection = makeSection(parent, L["Source preview"], 14, -340, "setup.source_preview")
+    -- ---- Live source preview (read-only check that the picker is wired) ----
+    makeSection(parent, L["Source preview"], 14, -340, "setup.source_preview")
     local hintFS = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     hintFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -364)
     hintFS:SetWidth(600); hintFS:SetJustifyH("LEFT")
-    hintFS:SetText(L["Live values read from the selected source for the current (or test) roster."])
+    hintFS:SetText(L["Live values read from the selected source — use this to confirm your damage meter is feeding data before you compute a split."])
     _registerInSection(hintFS)
 
     local previewScroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
@@ -464,27 +475,16 @@ local function buildSetupPage(parent)
     previewContent:SetSize(580, 1)
     previewScroll:SetScrollChild(previewContent)
     _registerInSection(previewScroll)
-    local previewRows = {}
-
-    local function fmtNum(v)
-        if not v or v <= 0 then return "|cff666666—|r" end
-        if v >= 1e6 then return string.format("%.2fM", v / 1e6) end
-        if v >= 1e3 then return string.format("%.1fk", v / 1e3) end
-        return string.format("%d", math.floor(v + 0.5))
-    end
+    local previewRows, previewEmpty = {}, nil
 
     local function refreshPreview()
         local roster = SplitW.Roster:Scan()
         local list, fromSource = {}, false
-        -- Prefer roster (real or test) so role icons + class colors are accurate.
         for _, e in ipairs(roster.tanks)   do table.insert(list, e) end
         for _, e in ipairs(roster.healers) do table.insert(list, e) end
         for _, e in ipairs(roster.dps)     do table.insert(list, e) end
-        -- No roster — fall back to whatever actors the active source has, so the
-        -- user can confirm Details!/Recount/Skada is wired up even when solo.
         if #list == 0 and SplitW.DPSSource and SplitW.DPSSource.ListActors then
-            local actors = SplitW.DPSSource:ListActors()
-            for _, a in ipairs(actors) do
+            for _, a in ipairs(SplitW.DPSSource:ListActors()) do
                 if type(a.name) == "string" and a.name ~= "" then
                     table.insert(list, { name = a.name, class = a.class,
                                          role = "DAMAGER", _sourceDps = a.dps, _sourceHps = a.hps })
@@ -492,7 +492,6 @@ local function buildSetupPage(parent)
             end
             fromSource = true
         end
-
         for i, entry in ipairs(list) do
             local row = previewRows[i]
             if not row then
@@ -525,7 +524,6 @@ local function buildSetupPage(parent)
         end
         for i = #list + 1, #previewRows do previewRows[i]:Hide() end
         previewContent:SetHeight(math.max(1, #list * 18 + 4))
-
         if #list == 0 then
             previewEmpty = previewEmpty or previewContent:CreateFontString(nil, "OVERLAY", "GameFontDisable")
             previewEmpty:SetPoint("TOPLEFT", previewContent, "TOPLEFT", 14, -8)
@@ -539,9 +537,7 @@ local function buildSetupPage(parent)
     parent._refreshPreview = refreshPreview
     refreshPreview()
 
-    -- Auto-refresh every 1.5s while the Setup page is visible. Attach to the
-    -- outer ScrollFrame (parent's parent) since content frames inside a
-    -- ScrollFrame don't reliably fire OnShow when the SF is shown/hidden.
+    -- Auto-refresh every 1.5s while the Réglages tab is shown.
     local pageSF = parent:GetParent()
     local ticker
     if pageSF then
@@ -555,9 +551,9 @@ local function buildSetupPage(parent)
         end)
     end
 
-    makeSection(parent, L["Permission status"], 14, -510, "setup.permissions")
+    makeSection(parent, L["Permission status"], 14, -520, "setup.permissions")
     local permFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    permFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -538)
+    permFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -548)
     permFS:SetWidth(600); permFS:SetJustifyH("LEFT")
     _registerInSection(permFS)
     permFS.refresh = function()
@@ -573,7 +569,7 @@ local function buildSetupPage(parent)
     -- Classic banner
     if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE and WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE then
         local banner = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        banner:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -580)
+        banner:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -600)
         banner:SetWidth(600); banner:SetJustifyH("LEFT")
         banner:SetText("|cffffd100" .. L["WARN_CLASSIC"] .. "|r")
     end
@@ -581,6 +577,7 @@ local function buildSetupPage(parent)
     parent.refresh = function()
         statusFS:refresh()
         permFS:refresh()
+        if parent._syncIlvlBtn    then parent._syncIlvlBtn()    end
         if parent._refreshPreview then parent._refreshPreview() end
     end
 end
@@ -589,11 +586,35 @@ end
 -- WEIGHTS PAGE
 -- ----------------------------------------------------------------
 local function buildWeightsPage(parent)
-    makeSection(parent, L["Manual weights"], 14, -8, "weights.main", 640)
+    -- ---- Constraints section (team-composition rules) ----
+    makeSection(parent, L["Constraints"], 14, -8, "players.constraints")
+    local cintro = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    cintro:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -32)
+    cintro:SetWidth(600); cintro:SetJustifyH("LEFT")
+    cintro:SetText("|cffaaaaaa" .. L["Composition rules applied AFTER the score-based snake distribution. Each toggle swaps minimally-disruptive DPS pairs to satisfy the rule."] .. "|r")
+    _registerInSection(cintro)
+    markAsNew(makeCheck(parent, L["Battle Rez per team (Druid/DK/Warlock/Hunter/Paladin/DH)"],
+        "constraintBR", 14, -58,
+        L["Enforce at least one battle-rez class per team."]), "constraintBR")
+    markAsNew(makeCheck(parent, L["Bloodlust per team (Shaman/Mage/Hunter/Evoker)"],
+        "constraintLust", 14, -86,
+        L["Enforce at least one Bloodlust/Heroism/Time Warp/Primal Rage source per team."]), "constraintLust")
+    markAsNew(makeCheck(parent, L["Balance melee vs ranged"],
+        "constraintMR", 14, -114,
+        L["Equalise the melee/ranged DPS ratio between teams. Class-based heuristic (Druid/Shaman/Hunter default to ranged)."]), "constraintMR")
+    markAsNew(makeCheck(parent, L["Mass Dispel per team (Priest)"],
+        "constraintMassDisp", 14, -142,
+        L["Enforce at least one Priest per team for Mass Dispel."]), "constraintMassDisp")
+    markAsNew(makeCheck(parent, L["Decurse per team (Mage/Druid/Shaman/Monk)"],
+        "constraintDecurse", 14, -170,
+        L["Enforce at least one decurse class per team."]), "constraintDecurse")
+
+    -- ---- Manual weights section ----
+    makeSection(parent, L["Manual weights"], 14, -210, "weights.main", 640)
     local hint = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    hint:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -32)
+    hint:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -234)
     hint:SetWidth(600); hint:SetJustifyH("LEFT")
-    hint:SetText("|cffaaaaaa" .. L["Adjust each DPS player's relative weight (1-100). Higher = goes into the lower-scoring team first."] .. "|r")
+    hint:SetText("|cffaaaaaa" .. L["Adjust each DPS player's relative weight (1-100). Higher = goes into the lower-scoring team first. Used only when source = Manual."] .. "|r")
     _registerInSection(hint)
 
     -- Scroll frame — TOPLEFT + fixed size so reparenting into the section
@@ -601,8 +622,8 @@ local function buildWeightsPage(parent)
     -- container's height (circular sizing). Width 600 keeps the inner
     -- scrollbar well clear of the outer page scrollbar.
     local scroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
-    scroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -56)
-    scroll:SetSize(600, 360)
+    scroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -258)
+    scroll:SetSize(600, 280)
     local content = CreateFrame("Frame", nil, scroll)
     content:SetSize(580, 1)
     scroll:SetScrollChild(content)
@@ -680,21 +701,21 @@ local function buildWeightsPage(parent)
 
     -- Action bar — below the scroll (TOPLEFT-anchored at a fixed Y rather than
     -- BOTTOMLEFT, so the chained section sizes them predictably).
-    local resetBtn = makeButton(parent, L["Reset all weights"], 14, -428, 160, function()
+    local resetBtn = makeButton(parent, L["Reset all weights"], 14, -550, 160, function()
         local db = SplitW:GetDB()
         local default = db.weightDefault or 50
         for k in pairs(db.weights) do db.weights[k] = default end
         populate()
     end, L["Reset every stored weight back to the default value."])
 
-    local refreshBtn = makeButton(parent, L["Refresh roster"], 182, -428, 160, function()
+    local refreshBtn = makeButton(parent, L["Refresh roster"], 182, -550, 160, function()
         populate()
     end, L["Re-read the raid roster from Blizzard's API."])
 
     local function testLabel()
         return SplitW.Roster:IsTestMode() and L["Disable test mode"] or L["Enable test mode"]
     end
-    local testBtn = makeButton(parent, testLabel(), 350, -428, 160, function() end,
+    local testBtn = makeButton(parent, testLabel(), 350, -550, 160, function() end,
         L["Use a simulated 20-man roster for UI testing."])
     testBtn:SetScript("OnClick", function()
         SplitW.Roster:SetTestMode(not SplitW.Roster:IsTestMode())
@@ -747,39 +768,49 @@ local function buildPreviewPage(parent)
     modeFS:SetWidth(600); modeFS:SetJustifyH("LEFT")
     _registerInSection(modeFS)
 
+    -- Which damage-meter source the algorithm is reading from. Visible on the
+    -- Preview page so you don't have to bounce to Réglages to check.
+    local srcFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    srcFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -86)
+    srcFS:SetWidth(600); srcFS:SetJustifyH("LEFT")
+    _registerInSection(srcFS)
+
     -- BEFORE / AFTER label. Use a Blizzard texture inline for the arrow because
     -- the FRIZQT__ font doesn't include U+2192 → and renders it as an empty box.
     local ARROW_TEX = "|TInterface\\Buttons\\UI-SpellbookIcon-NextPage-Up:18:18:0:0|t"
-    local beforeFS = makeLabel(parent, "|cffaaaaaa" .. L["Before"] .. "|r", 14, -92, "GameFontNormalLarge")
-    local arrowFS  = makeLabel(parent, ARROW_TEX, 326, -94, "GameFontNormalLarge")
-    local afterFS  = makeLabel(parent, "|cffffd100" .. L["After"] .. "|r", 360, -92, "GameFontNormalLarge")
+    local beforeFS = makeLabel(parent, "|cffaaaaaa" .. L["Before"] .. "|r", 14, -110, "GameFontNormalLarge")
+    local arrowFS  = makeLabel(parent, ARROW_TEX, 326, -112, "GameFontNormalLarge")
+    local afterFS  = makeLabel(parent, "|cffffd100" .. L["After"] .. "|r", 360, -110, "GameFontNormalLarge")
 
     -- Stats lines
     local beforeStatsFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    beforeStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -118)
+    beforeStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, -136)
     beforeStatsFS:SetWidth(300); beforeStatsFS:SetJustifyH("LEFT")
     _registerInSection(beforeStatsFS)
 
     local afterStatsFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    afterStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -118)
+    afterStatsFS:SetPoint("TOPLEFT", parent, "TOPLEFT", 360, -136)
     afterStatsFS:SetWidth(300); afterStatsFS:SetJustifyH("LEFT")
     _registerInSection(afterStatsFS)
 
-    -- Team A / Team B columns (after split)
+    -- Team A / Team B columns (after split). Width 320 to accommodate
+    -- long Name-Realm strings, SetSpacing for readable line gaps.
     local function makeTeamColumn(title, x)
         local titleFS = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         titleFS:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -200)
         titleFS:SetText(title)
         titleFS:SetTextColor(1, 0.82, 0)
         local listFS = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        listFS:SetPoint("TOPLEFT", titleFS, "BOTTOMLEFT", 0, -6)
-        listFS:SetWidth(300); listFS:SetJustifyH("LEFT")
+        listFS:SetPoint("TOPLEFT", titleFS, "BOTTOMLEFT", 0, -10)
+        listFS:SetWidth(320); listFS:SetJustifyH("LEFT")
+        listFS:SetSpacing(4)
         _registerInSection(titleFS)
         _registerInSection(listFS)
         return titleFS, listFS
     end
     local titleA, listA = makeTeamColumn(L["Team A"], 14)
     local titleB, listB = makeTeamColumn(L["Team B"], 360)
+    local baseA, baseB = L["Team A"], L["Team B"]
 
     -- Vertical separator between the two team columns (gold gradient).
     local sep = parent:CreateTexture(nil, "ARTWORK")
@@ -798,31 +829,48 @@ local function buildPreviewPage(parent)
     warnFS:SetWidth(600); warnFS:SetJustifyH("LEFT")
     _registerInSection(warnFS)
 
+    local ICON = "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|t"
     local WARN_TEXT = {
         ONE_TANK     = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tOnly one tank — both teams share the same tank? Check your roster."],
         NO_TANK      = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tNo tank detected in the raid."],
         TEAM_A_OVER  = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam A is too large for any reasonable raid size."],
         TEAM_B_OVER  = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam B is too large for any reasonable raid size."],
         UNEVEN_TEAMS = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeams differ by more than 1 player — score is balanced by giving the weakest DPS to the larger team."],
+        -- Constraint resolver warnings.
+        CONSTRAINT_MISSING_BR            = ICON .. L["No Battle Rez class in the raid — constraint cannot be satisfied."],
+        CONSTRAINT_MISSING_LUST          = ICON .. L["No Bloodlust giver in the raid — constraint cannot be satisfied."],
+        CONSTRAINT_MISSING_MASS_DISPEL   = ICON .. L["No Priest in the raid — Mass Dispel constraint cannot be satisfied."],
+        CONSTRAINT_MISSING_DECURSE       = ICON .. L["No decurse class in the raid — constraint cannot be satisfied."],
+        CONSTRAINT_UNSWAPPABLE_BR        = ICON .. L["Couldn't swap to satisfy Battle Rez (no compatible role pair)."],
+        CONSTRAINT_UNSWAPPABLE_LUST      = ICON .. L["Couldn't swap to satisfy Bloodlust (no compatible role pair)."],
+        CONSTRAINT_UNSWAPPABLE_MASS_DISPEL = ICON .. L["Couldn't swap to satisfy Mass Dispel."],
+        CONSTRAINT_UNSWAPPABLE_DECURSE   = ICON .. L["Couldn't swap to satisfy Decurse."],
+        CONSTRAINT_UNSWAPPABLE_MR        = ICON .. L["Couldn't fully balance melee/ranged ratio."],
     }
 
-    local function fmtTeam(team, sum)
+    local function fmtTeam(team)
         if #team == 0 then return "|cff888888" .. L["(empty)"] .. "|r" end
+        local src = SplitW:GetDB().dpsSource
         local lines = {}
-        local tanks, heals, dps = 0, 0, 0
         for _, e in ipairs(team) do
-            if e.role == "TANK" then tanks = tanks + 1
-            elseif e.role == "HEALER" then heals = heals + 1
-            else dps = dps + 1 end
             local r, g, b = classColor(e.class)
-            lines[#lines + 1] = string.format("%s |cff%02x%02x%02x%s|r",
-                roleIcon(e.role),
+            -- Per-player suffix: ilvl when ILVL source, otherwise DPS (k-format).
+            -- Always grey so the name stays the focal point.
+            local suffix = ""
+            local v = SplitW.DPSSource and SplitW.DPSSource:GetDPS(e.name)
+            if v and v > 0 then
+                if src == "ILVL" then
+                    suffix = string.format("  |cffaaaaaa[ilvl %d]|r", math.floor(v + 0.5))
+                else
+                    suffix = string.format("  |cffaaaaaa[%s]|r", fmtNum(v))
+                end
+            end
+            lines[#lines + 1] = string.format("%s  |cff%02x%02x%02x%s|r%s",
+                roleIcon(e.role, 16),
                 math.floor(r*255), math.floor(g*255), math.floor(b*255),
-                e.name)
+                e.name, suffix)
         end
-        local header = string.format("|cffffd100[%d players: %dT %dH %dDPS — score %d]|r\n",
-            #team, tanks, heals, dps, math.floor(sum + 0.5))
-        return header .. table.concat(lines, "\n")
+        return table.concat(lines, "\n")
     end
 
     parent.refresh = function()
@@ -835,6 +883,8 @@ local function buildPreviewPage(parent)
         else
             modeFS:SetText("|cff66ff66" .. format(L["Live roster (%d members)"], roster.raid) .. "|r")
         end
+        local srcLabel = SplitW.DPSSource and SplitW.DPSSource:ActiveSourceLabel() or "?"
+        srcFS:SetText("|cffaaaaaa" .. L["Source used for the split:"] .. "|r |cffffffff" .. srcLabel .. "|r")
         -- BEFORE stats: count current subgroup distribution.
         local beforeA, beforeB = 0, 0
         local bTA, bHA, bDA = 0, 0, 0
@@ -861,22 +911,31 @@ local function buildPreviewPage(parent)
         local split = SplitW:GetDB().lastSplit
         if not split then
             afterStatsFS:SetText("|cff888888" .. L["No split computed yet — click 'Compute split'."] .. "|r")
-            listA:SetText("")
-            listB:SetText("")
+            titleA:SetText(baseA); titleB:SetText(baseB)
+            listA:SetText(""); listB:SetText("")
             warnFS:SetText("")
             return
         end
 
+        -- Two-line format symmetric with the "Before" block. HPS suffix only
+        -- appears when at least one team has heal data (otherwise it's noise).
+        local hsA = math.floor((split.healScoreA or 0) + 0.5)
+        local hsB = math.floor((split.healScoreB or 0) + 0.5)
+        local hpsPart = (hsA > 0 or hsB > 0)
+            and function(v) return string.format(" — HPS %d", v) end
+            or function() return "" end
         afterStatsFS:SetText(string.format(
-            "|cffffd100%s|r\n  A: %d (%dT %dH %dDPS)\n      DPS: %d  HPS: %d\n  B: %d (%dT %dH %dDPS)\n      DPS: %d  HPS: %d",
+            "|cffffd100%s|r\n  A: %d (%dT %dH %dDPS — DPS %d%s)\n  B: %d (%dT %dH %dDPS — DPS %d%s)",
             L["Proposed split"],
             #split.teamA, split.tanksA, split.healsA, split.dpsA,
-            math.floor(split.scoreA + 0.5), math.floor((split.healScoreA or 0) + 0.5),
+            math.floor(split.scoreA + 0.5), hpsPart(hsA),
             #split.teamB, split.tanksB, split.healsB, split.dpsB,
-            math.floor(split.scoreB + 0.5), math.floor((split.healScoreB or 0) + 0.5)))
+            math.floor(split.scoreB + 0.5), hpsPart(hsB)))
 
-        listA:SetText(fmtTeam(split.teamA, split.scoreA))
-        listB:SetText(fmtTeam(split.teamB, split.scoreB))
+        titleA:SetText(string.format("%s  |cffaaaaaa(%d)|r", baseA, #split.teamA))
+        titleB:SetText(string.format("%s  |cffaaaaaa(%d)|r", baseB, #split.teamB))
+        listA:SetText(fmtTeam(split.teamA))
+        listB:SetText(fmtTeam(split.teamB))
 
         if #split.warnings > 0 then
             local out = {}
@@ -983,6 +1042,17 @@ local function buildAboutPage(parent)
     -- ---- Changelog (chained at the bottom) ----
     makeSection(parent, L["Changelog"], 14, -400, "about.changelog")
     local entries = {
+        { ver = "0.2.0", date = "2026-05-12", lines = {
+            L["• 0 required addons — Details!/Recount/Skada remain optional integrations alongside the new Item Level (inspect) source and the per-player Manual sliders."],
+            L["• Sister addon to BossWatch + TankWatch — shares the side-tab navigation and the family UI."],
+            L["• New section 'Constraints' on Setup — Raid Leader can toggle Battle Rez per team (ON by default), Bloodlust per team (ON by default), Balance melee vs ranged, Mass Dispel per team, Decurse per team."],
+            L["• Constraint resolver runs AFTER the score-based snake so swaps stay minimal — picks the DPS pair closest in score, preserves role boundaries."],
+            L["• Team size rebalance: 2T / 1H / 17DPS no longer ends 11/9 — the weakest DPS migrates until |#A - #B| ≤ 1."],
+            L["• Source used for the split is now displayed on the Preview tab, no round-trip to Setup needed."],
+            L["• Each team-list line shows ilvl or DPS as a grey suffix next to the name."],
+            L["• Team titles include the player count: 'Équipe A (5)'."],
+            L["• Escape closes the panel (UISpecialFrames registration)."],
+        }},
         { ver = "0.1.0", date = "2026-05-11", lines = {
             L["• 0 required addons — SplitWatch works standalone. Details!/Recount/Skada are optional for live DPS/HPS readings, otherwise Manual sliders are used."],
             L["• Sister addon to BossWatch + TankWatch — shares the side-tab navigation, gold accent UI, and family colour palette."],
@@ -1019,9 +1089,19 @@ end
 -- ============================================================
 -- BUILD MAIN PANEL
 -- ============================================================
+local PANEL_MIN_W, PANEL_MIN_H = 720, 500
+local PANEL_DEF_W, PANEL_DEF_H = 720, 540
+
 local function build()
     panel = CreateFrame("Frame", "SplitWatchOptionsPanel", UIParent, "PortraitFrameTemplate")
-    panel:SetSize(720, 540)
+    -- Restore persisted size, clamped to current UIParent so a value saved on
+    -- a bigger monitor doesn't make the panel overflow the screen on a smaller one.
+    SplitWatchDB = SplitWatchDB or {}
+    local sw = (UIParent and UIParent.GetWidth  and UIParent:GetWidth())  or 1920
+    local sh = (UIParent and UIParent.GetHeight and UIParent:GetHeight()) or 1080
+    local startW = math.max(PANEL_MIN_W, math.min(sw - 40, SplitWatchDB.panelW or PANEL_DEF_W))
+    local startH = math.max(PANEL_MIN_H, math.min(sh - 40, SplitWatchDB.panelH or PANEL_DEF_H))
+    panel:SetSize(startW, startH)
     local db = SplitW:GetDB()
     -- Restore saved panel position, but validate it's still on-screen — moving
     -- between monitors of different resolutions can leave saved offsets that
@@ -1046,6 +1126,8 @@ local function build()
                        p.x or 0, p.y or 0)
     end
     restorePosition()
+    -- Close on Escape via Blizzard's special-frames list.
+    tinsert(UISpecialFrames, "SplitWatchOptionsPanel")
     panel:SetMovable(true)
     panel:SetClampedToScreen(true)
     panel:EnableMouse(true)
@@ -1060,7 +1142,29 @@ local function build()
         }
     end)
     panel:SetFrameStrata("HIGH")
+    panel:SetResizable(true)
+    if panel.SetResizeBounds then
+        panel:SetResizeBounds(PANEL_MIN_W, PANEL_MIN_H, 1400, 1100)
+    end
     panel:Hide()
+
+    -- Resize grip (bottom-right corner). Updates panelW/panelH on release.
+    local grip = CreateFrame("Button", nil, panel)
+    grip:SetSize(16, 16)
+    grip:SetPoint("BOTTOMRIGHT", -4, 4)
+    grip:SetFrameLevel(panel:GetFrameLevel() + 10)
+    grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+    grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+    grip:SetScript("OnMouseDown", function(_, btn)
+        if btn == "LeftButton" then panel:StartSizing("BOTTOMRIGHT") end
+    end)
+    grip:SetScript("OnMouseUp", function()
+        panel:StopMovingOrSizing()
+        SplitWatchDB.panelW = math.floor(panel:GetWidth() + 0.5)
+        SplitWatchDB.panelH = math.floor(panel:GetHeight() + 0.5)
+    end)
+    addTooltip(grip, L["Drag to resize the options window. Saved account-wide."])
 
     -- Account-wide opacity (mirrors BossWatch's 0.85 default).
     SplitWatchDB = SplitWatchDB or {}
@@ -1108,8 +1212,14 @@ local function build()
         sf.content = content
         -- Keep the canvas width in sync with the scroll viewport so widgets
         -- anchored to TOPRIGHT stick to the visible edge as the panel resizes.
-        sf:SetScript("OnSizeChanged", function(self, w, _)
+        -- Also grow content height to fill the viewport when the panel gets
+        -- taller (otherwise empty space appears below the last section).
+        sf:SetScript("OnSizeChanged", function(self, w, h)
             if w and w > 0 and self.content then self.content:SetWidth(w) end
+            if h and h > 0 and self.content then
+                local cur = self.content:GetHeight() or 0
+                if cur < h then self.content:SetHeight(h) end
+            end
         end)
 
         builder(content)
@@ -1162,7 +1272,10 @@ local function build()
             end
         end
         for k, p in pairs(pages) do
-            if k == id then p:Show(); if p.refresh then p:refresh() end
+            if k == id then
+                p:Show()
+                local target = p.content or p
+                if target.refresh then target:refresh() end
             else p:Hide() end
         end
         panel._currentTab = id
@@ -1200,10 +1313,13 @@ local function build()
         addTooltip(t, t:GetText() or "")
     end
 
-    -- Refresh all pages
+    -- Refresh all pages — pages[id] is the outer ScrollFrame, but each page
+    -- builder stores its .refresh handler on the content child (sf.content),
+    -- so unwrap before calling.
     refresh = function()
         local cur = pages[panel._currentTab or "setup"]
-        if cur and cur.refresh then cur:refresh() end
+        local target = cur and cur.content or cur
+        if target and target.refresh then target:refresh() end
     end
     SplitW.RefreshAll = refresh
     panel.refreshAll = refresh

@@ -2,3 +2,8 @@
 *.zip
 .release/
 *.tmp
+
+# Local-only — Claude Code workspace state and secrets
+.claude/
+.env
+.env.*
