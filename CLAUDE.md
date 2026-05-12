@@ -159,6 +159,32 @@ Copy the profile system from BossWatch (`BossW:GetActiveProfileName`,
 - ❌ Third-party addons (BigWigs, Plater, Details, Skada, etc.) must NOT
   be named in user-facing entries. Describe the underlying change instead.
 
+### Saved frame positions must be clamped to current UIParent at load
+
+Every frame whose position is persisted to SavedVariables (currently just
+the options panel, future side widgets if any) MUST validate the saved
+coords against `UIParent:GetWidth() / GetHeight()` at the moment of
+placement. `SetClampedToScreen(true)` only kicks in on subsequent **drags**,
+not on the initial `SetPoint` — so a value saved on a 4K monitor and
+reloaded on 1080p (or in a smaller windowed mode) will place the frame
+off-screen and the user can't even drag it back.
+
+Pattern (applied in `restorePosition()` inside `build()`):
+
+```lua
+local sw, sh = UIParent:GetWidth(), UIParent:GetHeight()
+if math.abs(p.x or 0) > sw or math.abs(p.y or 0) > sh then
+    db.panelPoint = nil
+    panel:SetPoint("CENTER")
+else
+    panel:SetPoint(p.point, UIParent, p.relPoint, p.x, p.y)
+end
+```
+
+Same guard mirrored in `SplitW:ShowOptionsAt` for the sister-addon
+cross-handoff path. Apply this any time a NEW persisted-position frame
+gets added (resize grip, mover for a future floating widget, etc.).
+
 ### Classic build banner
 If `WOW_PROJECT_ID and WOW_PROJECT_MAINLINE and WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE`,
 display a yellow banner at the top of the panel: "⚠ Version Classic — UI not
