@@ -20,6 +20,15 @@ SplitW.Defaults = {
     -- Per-player manual weights: { ["Name"] = 50, ... }
     weights       = {},
 
+    -- Constraints applied AFTER the score-based snake distribution. Each
+    -- toggle independently enforces that both teams satisfy the rule. See
+    -- Splitter.lua CONSTRAINTS for the class lists.
+    constraintBR        = true,   -- ≥1 battle-rez per team (Druid/DK/Warlock/Hunter/Paladin/DH)
+    constraintLust      = true,   -- ≥1 lust-giver per team (Shaman/Mage/Hunter/Evoker)
+    constraintMR        = false,  -- equalise melee/ranged ratio between teams
+    constraintMassDisp  = false,  -- ≥1 Priest per team (Mass Dispel)
+    constraintDecurse   = false,  -- ≥1 decurser per team (Mage/Druid/Shaman/Monk)
+
     -- Last computed split (preview cache)
     lastSplit     = nil,
 

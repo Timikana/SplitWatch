@@ -6,10 +6,25 @@ versionnage selon [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-12
+
 ### Ajouté
-- **Niveau d'objet (inspect)** comme 5ème source de poids — utilise l'API Blizzard `NotifyInspect` / `C_PaperDollInfo.GetInspectItemLevel`, aucun addon tiers requis. File d'inspect throttlée à 1.5s / requête, portée 28y, cache TTL 90s. Bouton **Scanner l'ilvl du raid** sur l'onglet Réglages.
+- **Contraintes d'équilibrage** (nouvelle section sur Réglages) — passe de résolution appliquée **après** la distribution snake. Chaque contrainte vérifie une condition sur les équipes et swap le DPS le plus proche en score si elle n'est pas satisfaite :
+  - **☑ Battle Rez par équipe** (Druide / DK / Démoniste / Hunter / Paladin / DH) — *ON par défaut*
+  - **☑ Bloodlust par équipe** (Chaman / Mage / Hunter / Evoker) — *ON par défaut*
+  - **☐ Équilibrer melee vs distance** — heuristique par classe (Druide / Chaman / Hunter par défaut en distance)
+  - **☐ Mass Dispel par équipe** (Prêtre)
+  - **☐ Décurse par équipe** (Mage / Druide / Chaman / Moine)
+- **Avertissements** ajoutés dans l'aperçu si une contrainte ne peut pas être satisfaite (aucune classe matching dans le raid, ou pas de paire de rôle swappable).
+- **Niveau d'objet (inspect)** comme 5ème source de poids — utilise l'API Blizzard `NotifyInspect` / `C_PaperDollInfo.GetInspectItemLevel`, aucun addon tiers requis. File d'inspect throttlée à 1.5s / requête, portée 28y, cache TTL 90s. Bouton **Scanner l'ilvl du raid** sur l'onglet Réglages, désactivé quand la source ILVL n'est pas sélectionnée.
+- **Source utilisée pour le calcul** affichée sur l'onglet Aperçu (sous le statut roster) — plus besoin de zapper sur Réglages pour vérifier.
+- **Ilvl visible** à côté du nom de chaque joueur dans les colonnes Team A/B (`[ilvl 432]`), ou DPS k-formatté pour les autres sources (`[245.6k]`).
+- **Compteur par équipe** dans les titres : `Équipe A (5)` `Équipe B (5)`.
+- **Échap ferme le panneau** via `UISpecialFrames` (oubli porté depuis le squelette BossWatch).
 
 ### Corrigé
+- **Tailles d'équipe inégales >1 joueur** : la distribution par rôle indépendante pouvait produire 11/9 pour un 20-man avec compositions impaires (2T / 1H / 17DPS). Ajout d'une passe de rebalance qui déplace le DPS le plus faible de la team plus grande vers la plus petite jusqu'à un écart ≤ 1.
+- **Chaîne de refresh cassée** depuis le wrap ScrollFrame — `pages[id]:refresh()` appelait la SF au lieu de son contenu, donc les callbacks (`_syncIlvlBtn`, refresh source, etc.) ne firaient pas après changement de source.
 - **Récupération auto si la fenêtre est hors écran.** Si tu déplaces le panneau sur un grand moniteur puis relances WoW sur un plus petit (ou en fenêtré réduit), la position sauvegardée est validée contre les dimensions actuelles de `UIParent`. Si `|x|` ou `|y|` dépasse la largeur/hauteur de l'écran, le panneau est ramené au centre et la position sauvegardée est nettoyée. Idem pour le handoff entre addons jumeaux (`ShowOptionsAt`).
 
 ## [0.1.0] - 2026-05-11

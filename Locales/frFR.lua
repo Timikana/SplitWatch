@@ -110,6 +110,26 @@ L["• Sister addon to BossWatch + TankWatch — shares the side-tab navigation,
     "• Addon jumeau de BossWatch + TankWatch — partage la navigation par side-tabs, l'UI à accent doré, et la palette de couleurs de la famille."
 L["• Initial release: snake-distribution algorithm, preview pane with before/after stats, permission-gated Apply via SetRaidSubgroup."] =
     "• Version initiale : algorithme de distribution en serpent, aperçu avec stats avant/après, application protégée via SetRaidSubgroup."
+
+-- v0.2.0 changelog entries
+L["• 0 required addons — Details!/Recount/Skada remain optional integrations alongside the new Item Level (inspect) source and the per-player Manual sliders."] =
+    "• 0 addon requis — Details!/Recount/Skada restent des intégrations optionnelles aux côtés de la nouvelle source Niveau d'objet (inspect) et des sliders Manuels."
+L["• Sister addon to BossWatch + TankWatch — shares the side-tab navigation and the family UI."] =
+    "• Addon jumeau de BossWatch + TankWatch — partage la navigation par side-tabs et l'UI de la famille."
+L["• New section 'Constraints' on Setup — Raid Leader can toggle Battle Rez per team (ON by default), Bloodlust per team (ON by default), Balance melee vs ranged, Mass Dispel per team, Decurse per team."] =
+    "• Nouvelle section 'Contraintes' sur Réglages — le RL peut activer Battle Rez par équipe (ON par défaut), Bloodlust par équipe (ON par défaut), équilibrer melee vs distance, Mass Dispel par équipe, Décurse par équipe."
+L["• Constraint resolver runs AFTER the score-based snake so swaps stay minimal — picks the DPS pair closest in score, preserves role boundaries."] =
+    "• Le résolveur de contraintes tourne APRÈS la distribution en serpent — il swap la paire de DPS la plus proche en score pour minimiser l'impact, en préservant les rôles."
+L["• Team size rebalance: 2T / 1H / 17DPS no longer ends 11/9 — the weakest DPS migrates until |#A - #B| ≤ 1."] =
+    "• Rebalance de taille d'équipe : 2T / 1H / 17DPS ne finit plus en 11/9 — le DPS le plus faible migre jusqu'à un écart ≤ 1."
+L["• Source used for the split is now displayed on the Preview tab, no round-trip to Setup needed."] =
+    "• La source utilisée pour le calcul est affichée sur l'onglet Aperçu — plus besoin de zapper sur Réglages."
+L["• Each team-list line shows ilvl or DPS as a grey suffix next to the name."] =
+    "• Chaque ligne d'équipe affiche l'ilvl ou le DPS en suffixe gris à côté du nom."
+L["• Team titles include the player count: 'Équipe A (5)'."] =
+    "• Les titres d'équipe incluent le compteur : 'Équipe A (5)'."
+L["• Escape closes the panel (UISpecialFrames registration)."] =
+    "• Échap ferme le panneau (intégration UISpecialFrames)."
 L["• Damage meter sources: Details!, Recount, Skada, Manual — unavailable ones grey out in the dropdown."] =
     "• Sources de damage meter : Details!, Recount, Skada, Manuel — celles non installées sont grisées dans le dropdown."
 L["• Healers balanced by HPS (live read from the active source), DPS by damage."] =
@@ -161,6 +181,43 @@ L["Test mode ON (20 simulated)"] = "Mode test ACTIF (20 simulés)"
 L["No raid detected — enable test mode to preview"] = "Pas de raid détecté — active le mode test pour visualiser"
 L["Live roster (%d members)"] = "Raid réel (%d membres)"
 L["Source used for the split:"] = "Source utilisée pour le calcul :"
+
+-- Constraints
+L["Constraints"] = "Contraintes"
+L["Battle Rez per team (Druid/DK/Warlock/Hunter/Paladin/DH)"] =
+    "Battle Rez par équipe (Druide/DK/Démo/Hunter/Paladin/Démoniste Hunter)"
+L["Enforce at least one battle-rez class per team."] = "Force au moins une classe avec Battle Rez par équipe."
+L["Bloodlust per team (Shaman/Mage/Hunter/Evoker)"] =
+    "Bloodlust par équipe (Chaman/Mage/Hunter/Evoker)"
+L["Enforce at least one Bloodlust/Heroism/Time Warp/Primal Rage source per team."] =
+    "Force au moins une source de Bloodlust / Héroïsme / Hâte temporelle / Rage primitive par équipe."
+L["Balance melee vs ranged"] = "Équilibrer melee vs distance"
+L["Equalise the melee/ranged DPS ratio between teams. Class-based heuristic (Druid/Shaman/Hunter default to ranged)."] =
+    "Équilibre le ratio melee/distance entre les équipes. Heuristique par classe (Druide/Chaman/Hunter par défaut en distance)."
+L["Mass Dispel per team (Priest)"] = "Mass Dispel par équipe (Prêtre)"
+L["Enforce at least one Priest per team for Mass Dispel."] = "Force au moins un Prêtre par équipe pour Mass Dispel."
+L["Decurse per team (Mage/Druid/Shaman/Monk)"] = "Décurse par équipe (Mage/Druide/Chaman/Moine)"
+L["Enforce at least one decurse class per team."] = "Force au moins une classe pouvant décurse par équipe."
+
+-- Constraint warnings
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tNo Battle Rez class in the raid — constraint cannot be satisfied."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tAucune classe avec Battle Rez dans le raid — contrainte non satisfaite."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tNo Bloodlust giver in the raid — constraint cannot be satisfied."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tAucun donneur de Bloodlust dans le raid — contrainte non satisfaite."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tNo Priest in the raid — Mass Dispel constraint cannot be satisfied."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tAucun Prêtre dans le raid — contrainte Mass Dispel non satisfaite."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tNo decurse class in the raid — constraint cannot be satisfied."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tAucune classe décurse dans le raid — contrainte non satisfaite."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tCouldn't swap to satisfy Battle Rez (no compatible role pair)."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tSwap impossible pour satisfaire Battle Rez (pas de paire de rôle compatible)."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tCouldn't swap to satisfy Bloodlust (no compatible role pair)."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tSwap impossible pour satisfaire Bloodlust (pas de paire de rôle compatible)."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tCouldn't swap to satisfy Mass Dispel."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tSwap impossible pour satisfaire Mass Dispel."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tCouldn't swap to satisfy Decurse."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tSwap impossible pour satisfaire Décurse."
+L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tCouldn't fully balance melee/ranged ratio."] =
+    "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tImpossible d'équilibrer totalement le ratio melee/distance."
 L["Source preview"] = "Aperçu de la source"
 L["Live values read from the selected source for the current (or test) roster."] =
     "Valeurs lues en direct depuis la source sélectionnée, pour le roster actuel (ou test)."

@@ -582,6 +582,24 @@ local function buildSetupPage(parent)
         banner:SetText("|cffffd100" .. L["WARN_CLASSIC"] .. "|r")
     end
 
+    -- ---- Constraint toggles (post-distribution rules enforced by Splitter) ----
+    makeSection(parent, L["Constraints"], 14, -600, "setup.constraints")
+    markAsNew(makeCheck(parent, L["Battle Rez per team (Druid/DK/Warlock/Hunter/Paladin/DH)"],
+        "constraintBR", 14, -630,
+        L["Enforce at least one battle-rez class per team."]), "constraintBR")
+    markAsNew(makeCheck(parent, L["Bloodlust per team (Shaman/Mage/Hunter/Evoker)"],
+        "constraintLust", 14, -658,
+        L["Enforce at least one Bloodlust/Heroism/Time Warp/Primal Rage source per team."]), "constraintLust")
+    markAsNew(makeCheck(parent, L["Balance melee vs ranged"],
+        "constraintMR", 14, -686,
+        L["Equalise the melee/ranged DPS ratio between teams. Class-based heuristic (Druid/Shaman/Hunter default to ranged)."]), "constraintMR")
+    markAsNew(makeCheck(parent, L["Mass Dispel per team (Priest)"],
+        "constraintMassDisp", 14, -714,
+        L["Enforce at least one Priest per team for Mass Dispel."]), "constraintMassDisp")
+    markAsNew(makeCheck(parent, L["Decurse per team (Mage/Druid/Shaman/Monk)"],
+        "constraintDecurse", 14, -742,
+        L["Enforce at least one decurse class per team."]), "constraintDecurse")
+
     parent.refresh = function()
         statusFS:refresh()
         permFS:refresh()
@@ -813,12 +831,23 @@ local function buildPreviewPage(parent)
     warnFS:SetWidth(600); warnFS:SetJustifyH("LEFT")
     _registerInSection(warnFS)
 
+    local ICON = "|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|t"
     local WARN_TEXT = {
         ONE_TANK     = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tOnly one tank — both teams share the same tank? Check your roster."],
         NO_TANK      = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tNo tank detected in the raid."],
         TEAM_A_OVER  = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam A is too large for any reasonable raid size."],
         TEAM_B_OVER  = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeam B is too large for any reasonable raid size."],
         UNEVEN_TEAMS = L["|TInterface\\DialogFrame\\UI-Dialog-Icon-AlertNew:16:16:0:0|tTeams differ by more than 1 player — score is balanced by giving the weakest DPS to the larger team."],
+        -- Constraint resolver warnings.
+        CONSTRAINT_MISSING_BR            = ICON .. L["No Battle Rez class in the raid — constraint cannot be satisfied."],
+        CONSTRAINT_MISSING_LUST          = ICON .. L["No Bloodlust giver in the raid — constraint cannot be satisfied."],
+        CONSTRAINT_MISSING_MASS_DISPEL   = ICON .. L["No Priest in the raid — Mass Dispel constraint cannot be satisfied."],
+        CONSTRAINT_MISSING_DECURSE       = ICON .. L["No decurse class in the raid — constraint cannot be satisfied."],
+        CONSTRAINT_UNSWAPPABLE_BR        = ICON .. L["Couldn't swap to satisfy Battle Rez (no compatible role pair)."],
+        CONSTRAINT_UNSWAPPABLE_LUST      = ICON .. L["Couldn't swap to satisfy Bloodlust (no compatible role pair)."],
+        CONSTRAINT_UNSWAPPABLE_MASS_DISPEL = ICON .. L["Couldn't swap to satisfy Mass Dispel."],
+        CONSTRAINT_UNSWAPPABLE_DECURSE   = ICON .. L["Couldn't swap to satisfy Decurse."],
+        CONSTRAINT_UNSWAPPABLE_MR        = ICON .. L["Couldn't fully balance melee/ranged ratio."],
     }
 
     local function fmtTeam(team)
@@ -1015,6 +1044,17 @@ local function buildAboutPage(parent)
     -- ---- Changelog (chained at the bottom) ----
     makeSection(parent, L["Changelog"], 14, -400, "about.changelog")
     local entries = {
+        { ver = "0.2.0", date = "2026-05-12", lines = {
+            L["• 0 required addons — Details!/Recount/Skada remain optional integrations alongside the new Item Level (inspect) source and the per-player Manual sliders."],
+            L["• Sister addon to BossWatch + TankWatch — shares the side-tab navigation and the family UI."],
+            L["• New section 'Constraints' on Setup — Raid Leader can toggle Battle Rez per team (ON by default), Bloodlust per team (ON by default), Balance melee vs ranged, Mass Dispel per team, Decurse per team."],
+            L["• Constraint resolver runs AFTER the score-based snake so swaps stay minimal — picks the DPS pair closest in score, preserves role boundaries."],
+            L["• Team size rebalance: 2T / 1H / 17DPS no longer ends 11/9 — the weakest DPS migrates until |#A - #B| ≤ 1."],
+            L["• Source used for the split is now displayed on the Preview tab, no round-trip to Setup needed."],
+            L["• Each team-list line shows ilvl or DPS as a grey suffix next to the name."],
+            L["• Team titles include the player count: 'Équipe A (5)'."],
+            L["• Escape closes the panel (UISpecialFrames registration)."],
+        }},
         { ver = "0.1.0", date = "2026-05-11", lines = {
             L["• 0 required addons — SplitWatch works standalone. Details!/Recount/Skada are optional for live DPS/HPS readings, otherwise Manual sliders are used."],
             L["• Sister addon to BossWatch + TankWatch — shares the side-tab navigation, gold accent UI, and family colour palette."],
