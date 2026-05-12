@@ -44,8 +44,12 @@ L["test mode active — apply is disabled"] = "Mode test actif — l'application
 
 -- Weights page
 L["Manual weights"] = "Poids manuels"
-L["Adjust each DPS player's relative weight (1-100). Higher = goes into the lower-scoring team first."] =
-    "Règle le poids relatif de chaque joueur (1-100). Plus élevé = part dans l'équipe la moins chargée en priorité."
+L["Adjust each DPS player's relative weight (1-100). Higher = goes into the lower-scoring team first. Used only when source = Manual."] =
+    "Règle le poids relatif de chaque joueur (1-100). Plus élevé = part dans l'équipe la moins chargée en priorité. Utilisé uniquement quand la source = Manuel."
+L["Composition rules applied AFTER the score-based snake distribution. Each toggle swaps minimally-disruptive DPS pairs to satisfy the rule."] =
+    "Règles de composition appliquées APRÈS la distribution snake basée sur le score. Chaque toggle swap les paires de DPS les plus proches en score pour satisfaire la règle."
+L["Drag to resize the options window. Saved account-wide."] =
+    "Glisse pour redimensionner la fenêtre. Sauvegardé pour tout le compte."
 L["Reset all weights"] = "Réinitialiser tous les poids"
 L["Reset every stored weight back to the default value."] = "Remet tous les poids enregistrés à la valeur par défaut."
 L["Refresh roster"] = "Rafraîchir le roster"
