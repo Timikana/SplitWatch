@@ -1092,7 +1092,7 @@ local function buildPreviewPage(parent)
         end
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("|cffaaaaaa" .. L["Right-click for lock options"] .. "|r")
-        GameTooltip:AddLine("|cffaaaaaa" .. L["Left-click + click another team's player to swap"] .. "|r")
+        GameTooltip:AddLine("|cffaaaaaa" .. L["Left-click to select, then left-click an opposing-team player to swap"] .. "|r")
         GameTooltip:Show()
     end
 
@@ -1155,32 +1155,45 @@ local function buildPreviewPage(parent)
                 row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
                 row:SetScript("OnEnter", showRowTooltip)
                 row:SetScript("OnLeave", function() GameTooltip:Hide() end)
-                row:SetScript("OnMouseDown", function(self, button)
-                    if button == "LeftButton" and self._entry then
+                -- Two-step swap via OnClick: first left-click selects (sets
+                -- dragSource + dims). Second left-click on a different-team
+                -- row swaps the pair via auto-locks. Right-click opens the
+                -- lock context menu (handled by OnMouseUp below).
+                row:SetScript("OnClick", function(self, button)
+                    if button ~= "LeftButton" then return end
+                    if not self._entry then return end
+                    local source = dragSource
+                    if not source then
+                        -- First click: arm the swap.
                         dragSource = self._entry
                         clearDragVisuals()
                         self.text:SetAlpha(0.5)
+                        return
                     end
+                    if source.name == self._entry.name then
+                        -- Click same row again → cancel.
+                        dragSource = nil
+                        clearDragVisuals()
+                        return
+                    end
+                    if source.team == self._entry.team then
+                        -- Same team — re-arm onto the new selection.
+                        dragSource = self._entry
+                        clearDragVisuals()
+                        self.text:SetAlpha(0.5)
+                        return
+                    end
+                    -- Different team → swap.
+                    dragSource = nil
+                    clearDragVisuals()
+                    SplitW:SetLock(source.name,     self._entry.team)
+                    SplitW:SetLock(self._entry.name, source.team)
+                    recomputeAndRefresh()
                 end)
                 row:SetScript("OnMouseUp", function(self, button)
                     if button == "RightButton" then
                         if self._entry then showLockMenu(self._entry, self) end
                         return
-                    end
-                    if button == "LeftButton" then
-                        local source = dragSource
-                        dragSource = nil
-                        clearDragVisuals()
-                        if source and self._entry
-                           and source.name ~= self._entry.name
-                           and source.team ~= self._entry.team then
-                            -- Swap by locking both to their new teams. The
-                            -- pre-snake lock pass will place them; subsequent
-                            -- recomputes preserve the swap.
-                            SplitW:SetLock(source.name,     self._entry.team)
-                            SplitW:SetLock(self._entry.name, source.team)
-                            recomputeAndRefresh()
-                        end
                     end
                 end)
                 -- NOTE: deliberately NOT _registerInSection(row). These rows

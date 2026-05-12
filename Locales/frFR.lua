@@ -282,6 +282,8 @@ L["Manual weight"] = "Poids manuel"
 L["Locked on Team %s"] = "Verrouillé sur l'Équipe %s"
 L["Right-click for lock options"] = "Clic droit pour les options de verrouillage"
 L["Left-click + click another team's player to swap"] = "Clic gauche + clic sur un joueur de l'autre équipe pour échanger"
+L["Left-click to select, then left-click an opposing-team player to swap"] =
+    "Clic gauche pour sélectionner, puis clic gauche sur un joueur de l'autre équipe pour échanger"
 
 -- New constraints (v0.3.1)
 L["Decurse per team (Mage/Druid/Shaman)"] = "Décurse par équipe (Mage/Druide/Chaman)"
