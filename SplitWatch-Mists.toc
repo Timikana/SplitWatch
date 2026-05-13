@@ -33,4 +33,9 @@ Apply.lua
 DPSSource.lua
 
 # Options panel
+Options\Widgets.lua
 Options\Panel.lua
+Options\Pages\Setup.lua
+Options\Pages\Composition.lua
+Options\Pages\Preview.lua
+Options\Pages\About.lua

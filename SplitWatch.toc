@@ -34,4 +34,12 @@ Apply.lua
 DPSSource.lua
 
 # Options panel
+#   1. Widgets.lua first — registers widget factories on SplitW.Options
+#   2. Panel.lua — section system + build harness, exposes makeSection etc.
+#   3. Pages/*.lua — page builders, register into SplitW.Options.Pages
+Options\Widgets.lua
 Options\Panel.lua
+Options\Pages\Setup.lua
+Options\Pages\Composition.lua
+Options\Pages\Preview.lua
+Options\Pages\About.lua
