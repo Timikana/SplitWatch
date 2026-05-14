@@ -29,6 +29,28 @@ SplitW.Defaults = {
     constraintMassDisp  = false,  -- ≥1 Priest per team (Mass Dispel)
     constraintDecurse   = false,  -- ≥1 decurser per team (Mage/Druid/Shaman/Monk)
 
+    -- Manual locks: { ["PlayerName"] = "A" | "B" } — locked players are placed
+    -- on their team before snake distribution and excluded from all swaps.
+    lockedTeams         = {},
+
+    -- Broadcast: after a successful Apply, post the team rosters to chat.
+    broadcastOnApply    = false,
+    broadcastChannel    = "RAID",  -- RAID | RAID_WARNING | PARTY | SAY
+
+    -- When OFF (default): a manual swap (Aperçu 2-click) just exchanges the
+    -- two clicked players and locks them. When ON: the swap kicks off a full
+    -- recompute so the rest of the raid is re-snake-distributed against the
+    -- new locks. RL choice — most prefer the OFF behaviour because they
+    -- expect their click to move only those two players.
+    autoRebalanceAfterSwap = false,
+
+    -- Test-mode roster size (10-40). Roster:Scan slices the test pools to
+    -- this count using realistic tank/healer/DPS ratios.
+    testRosterSize         = 20,
+
+    -- Named presets: { ["Spirit Kings"] = { config = {...}, locks = {...} } }
+    presets             = {},
+
     -- Last computed split (preview cache)
     lastSplit     = nil,
 
@@ -189,6 +211,160 @@ function SplitW:GetEffectiveHPS(entry)
 end
 
 -- ============================================================
+-- LOCKS API — pin a player to a specific team before the split is computed.
+-- ============================================================
+function SplitW:GetLock(name)
+    if not name then return nil end
+    local locks = SplitW:GetDB().lockedTeams
+    return locks and locks[name]
+end
+
+function SplitW:SetLock(name, team)
+    if not name then return end
+    local db = SplitW:GetDB()
+    db.lockedTeams = db.lockedTeams or {}
+    if team == "A" or team == "B" then
+        db.lockedTeams[name] = team
+    else
+        db.lockedTeams[name] = nil
+    end
+end
+
+function SplitW:ClearLocks()
+    SplitW:GetDB().lockedTeams = {}
+end
+
+function SplitW:CountLocks()
+    local n = 0
+    for _ in pairs(SplitW:GetDB().lockedTeams or {}) do n = n + 1 end
+    return n
+end
+
+-- ============================================================
+-- PRESETS API — save/load named configurations (constraints + locks + source).
+-- ============================================================
+local PRESET_KEYS = {
+    "constraintBR", "constraintLust", "constraintMR",
+    "constraintMassDisp", "constraintDecurse",
+    "dpsSource",
+}
+
+function SplitW:SavePreset(name)
+    if not name or name == "" then return false, "missing name" end
+    local db = SplitW:GetDB()
+    db.presets = db.presets or {}
+    local snapshot = { config = {}, locks = {} }
+    for _, k in ipairs(PRESET_KEYS) do
+        snapshot.config[k] = db[k]
+    end
+    for k, v in pairs(db.lockedTeams or {}) do snapshot.locks[k] = v end
+    db.presets[name] = snapshot
+    return true
+end
+
+function SplitW:LoadPreset(name)
+    local db = SplitW:GetDB()
+    local p = db.presets and db.presets[name]
+    if not p then return false, "preset not found" end
+    for k, v in pairs(p.config or {}) do db[k] = v end
+    db.lockedTeams = {}
+    for k, v in pairs(p.locks or {}) do db.lockedTeams[k] = v end
+    return true
+end
+
+function SplitW:DeletePreset(name)
+    local db = SplitW:GetDB()
+    if db.presets and db.presets[name] then
+        db.presets[name] = nil
+        return true
+    end
+    return false
+end
+
+function SplitW:ListPresets()
+    local out = {}
+    for n in pairs(SplitW:GetDB().presets or {}) do out[#out + 1] = n end
+    table.sort(out)
+    return out
+end
+
+-- ============================================================
+-- BUILT-IN PRESETS — known split-mechanic fights, ready-to-load.
+-- Constraints tuned to what each fight typically demands. RL can edit /
+-- delete after import; they're imported as regular user presets.
+-- ============================================================
+SplitW.BUILTIN_PRESETS = {
+    ["Spirit Kings (MoP)"] = {
+        config = {
+            dpsSource          = "DETAILS",
+            constraintBR       = true,
+            constraintLust     = true,
+            constraintMR       = true,    -- Pinning Spear melee dispatch + Volley ranged
+            constraintMassDisp = true,    -- Maddened Shroud + Pillage stacks
+            constraintDecurse  = false,
+            constraintExternal = true,    -- tanks eat heavy melee + Cobalt Mine soaks
+            constraintSoak     = false,
+        },
+        locks = {},
+    },
+    ["Lei Shen (MoP)"] = {
+        config = {
+            dpsSource          = "DETAILS",
+            constraintBR       = true,
+            constraintLust     = true,
+            constraintMR       = true,    -- Static Shock chains target ranged
+            constraintMassDisp = false,
+            constraintDecurse  = false,
+            constraintExternal = true,
+            constraintSoak     = true,    -- Ball Lightning soaks need immunities
+        },
+        locks = {},
+    },
+    ["Council of Elders (MoP)"] = {
+        config = {
+            dpsSource          = "DETAILS",
+            constraintBR       = true,
+            constraintLust     = true,
+            constraintMR       = false,
+            constraintMassDisp = false,
+            constraintDecurse  = true,    -- Frostbite + Bone Spike de-curse
+            constraintExternal = true,
+            constraintSoak     = false,
+        },
+        locks = {},
+    },
+    ["Conclave of Wind"] = {
+        config = {
+            dpsSource          = "DETAILS",
+            constraintBR       = true,
+            constraintLust     = true,
+            constraintMR       = true,    -- platforms favour ranged sticky positioning
+            constraintMassDisp = false,
+            constraintDecurse  = false,
+            constraintExternal = true,
+            constraintSoak     = false,
+        },
+        locks = {},
+    },
+}
+
+-- Copy every built-in preset into db.presets, overwriting any existing user
+-- preset with the same name. RL can then edit or delete them like normal.
+function SplitW:RestoreBuiltinPresets()
+    local db = SplitW:GetDB()
+    db.presets = db.presets or {}
+    local n = 0
+    for name, payload in pairs(SplitW.BUILTIN_PRESETS) do
+        local snapshot = { config = {}, locks = {} }
+        for k, v in pairs(payload.config or {}) do snapshot.config[k] = v end
+        for k, v in pairs(payload.locks  or {}) do snapshot.locks[k]  = v end
+        db.presets[name] = snapshot
+        n = n + 1
+    end
+    return n
+end
+
+-- ============================================================
 -- SLASH COMMAND
 -- ============================================================
 SLASH_SPLITWATCH1 = "/splitw"
@@ -217,6 +393,48 @@ SlashCmdList["SPLITWATCH"] = function(msg)
         SplitW:GetDB().lastSplit = s
         if SplitW.RefreshAll then SplitW:RefreshAll() end
         print("|cffffd100SplitWatch:|r " .. (arg == "off" and L["test mode off"] or L["test mode on (20 simulated members)"]))
+    elseif cmd == "preset" then
+        local sub, rest = arg:match("^(%S+)%s*(.*)$")
+        if sub == "save" and rest and rest ~= "" then
+            if SplitW:SavePreset(rest) then
+                print("|cffffd100SplitWatch:|r " .. format(L["preset saved: %s"], rest))
+            end
+        elseif sub == "load" and rest and rest ~= "" then
+            local ok, err = SplitW:LoadPreset(rest)
+            if ok then
+                print("|cffffd100SplitWatch:|r " .. format(L["preset loaded: %s"], rest))
+                if SplitW.RefreshAll then SplitW:RefreshAll() end
+            else
+                print("|cffff5555SplitWatch:|r " .. (err or "?"))
+            end
+        elseif sub == "delete" and rest and rest ~= "" then
+            if SplitW:DeletePreset(rest) then
+                print("|cffffd100SplitWatch:|r " .. format(L["preset deleted: %s"], rest))
+            end
+        elseif sub == "list" or sub == nil or sub == "" then
+            local list = SplitW:ListPresets()
+            if #list == 0 then
+                print("|cffffd100SplitWatch:|r " .. L["no presets saved"])
+            else
+                print("|cffffd100SplitWatch:|r " .. L["presets:"] .. " " .. table.concat(list, ", "))
+            end
+        else
+            print("|cffffd100SplitWatch:|r " .. L["usage: /splitw preset save|load|delete <name> | list"])
+        end
+    elseif cmd == "lock" then
+        local subname, team = arg:match("^(%S+)%s*(.*)$")
+        if subname == "clear" then
+            SplitW:ClearLocks()
+            print("|cffffd100SplitWatch:|r " .. L["all locks cleared"])
+        elseif subname and (team == "A" or team == "B") then
+            SplitW:SetLock(subname, team)
+            print("|cffffd100SplitWatch:|r " .. format(L["locked %s → %s"], subname, team))
+        elseif subname and (team == "" or team == "free") then
+            SplitW:SetLock(subname, nil)
+            print("|cffffd100SplitWatch:|r " .. format(L["unlocked %s"], subname))
+        else
+            print("|cffffd100SplitWatch:|r " .. L["usage: /splitw lock <name> A|B|free  |  /splitw lock clear"])
+        end
     elseif cmd == "reset" then
         SplitWatchDB = nil
         ReloadUI()
@@ -226,6 +444,8 @@ SlashCmdList["SPLITWATCH"] = function(msg)
         print("  /splitw preview    - " .. L["compute and show split preview"])
         print("  /splitw apply      - " .. L["apply the current split via SetRaidSubgroup"])
         print("  /splitw test [off] - " .. L["toggle simulated 20-man roster"])
+        print("  /splitw lock <name> A|B|free  - " .. L["pin a player to a team"])
+        print("  /splitw preset save|load|delete <name> | list - " .. L["manage saved presets"])
         print("  /splitw reset      - " .. L["reset all settings + reload"])
     end
 end
@@ -274,14 +494,28 @@ end
 local init = CreateFrame("Frame")
 init:RegisterEvent("PLAYER_LOGIN")
 init:RegisterEvent("PLAYER_REGEN_ENABLED")
+init:RegisterEvent("GROUP_ROSTER_UPDATE")
 init:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
         SplitW:GetDB()
+        -- lastSplit (proposed) is runtime state — wipe any value persisted
+        -- from a previous session (otherwise stale test-roster splits would
+        -- render after /reload while Roster._testMode is back to its file-
+        -- load default of false, giving the impression test mode is on).
+        SplitW:GetDB().lastSplit = nil
         if SplitW.RegisterMinimapIcon then SplitW:RegisterMinimapIcon() end
         if SplitW.RegisterBlizzardSettings then SplitW:RegisterBlizzardSettings() end
         local v = C_AddOns and C_AddOns.GetAddOnMetadata(addonName, "Version") or "?"
         print(format(L["|cffffd100SplitWatch|r v%s loaded — type |cffffff00/splitw|r for options"], v))
     elseif event == "PLAYER_REGEN_ENABLED" then
         if SplitW.Apply and SplitW.Apply.OnCombatEnd then SplitW.Apply:OnCombatEnd() end
+    elseif event == "GROUP_ROSTER_UPDATE" then
+        -- Mark the current split as potentially stale. The Aperçu tab shows
+        -- a banner inviting the RL to Recompute; we don't auto-recompute
+        -- (RL decides when to commit a new split).
+        if SplitW:GetDB().lastSplit then
+            SplitW._rosterDirty = true
+            if SplitW.RefreshAll then SplitW:RefreshAll() end
+        end
     end
 end)

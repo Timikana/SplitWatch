@@ -36,11 +36,19 @@ SplitWatch reads your raid roster, runs a snake-distribution algorithm balanced 
 - **Roster scanner** — reads your raid via `GetRaidRosterInfo` + `UnitGroupRolesAssigned`, infers role (TANK / HEALER / DAMAGER) and class
 - **Snake-distribution algorithm** — tanks alternate, healers snake-distribute by HPS, DPS snake-distribute by damage; weakest player fills the gap on the larger team for uneven raids
 - **Team-composition constraints** (Raid-Leader toggle, applied AFTER the snake distribution with minimal-disruption swaps):
-  - ☑ Battle Rez per team — Druid / DK / Warlock / Hunter / Paladin / DH *(default ON)*
+  - ☑ Battle Rez per team — Druid / DK / Warlock *(default ON)*
   - ☑ Bloodlust per team — Shaman / Mage / Hunter / Evoker *(default ON)*
-  - ☐ Balance melee vs ranged (class-based heuristic)
+  - ☐ Balance melee vs ranged (class-based heuristic, refined by inspect-spec when available)
   - ☐ Mass Dispel per team — Priest
-  - ☐ Decurse per team — Mage / Druid / Shaman / Monk
+  - ☐ Decurse per team — Mage / Druid / Shaman
+  - ☐ External CD healer per team — Paladin / Priest / Druid / Monk (filtered to HEALER role)
+  - ☐ Soak immunity per team — Paladin / Mage / Hunter (Divine Shield / Ice Block / Aspect of the Turtle)
+- **Manual locks** — pin a player on Team A or Team B before computing. Right-click a name in the Preview columns to open the lock menu, or use `/splitw lock <name> A|B|free`. The algorithm respects locks across all passes (snake distribution, size rebalance, constraint resolver, melee/ranged equaliser).
+- **Drag-and-drop swap** — left-click a name in one team column, then left-click any player on the OTHER team to swap them. Both players are auto-locked so the swap persists across recomputes.
+- **Movement indicator** — orange arrow next to a player whose team changed since the last Apply, so the RL spots recompute churn at a glance.
+- **Named presets** — save the current constraints + locks + DPS source under a name; reload before a specific fight. UI on Réglages with save / load / delete buttons, or `/splitw preset save|load|delete <name>` / `list`.
+- **Broadcast on Apply** — optionally auto-post the team rosters to chat (RAID / RAID_WARNING / PARTY / SAY) when a split is applied, so the raid sees who's on what team.
+- **Per-player tooltips** on Preview team rows — hover a name to see class, role, DPS, HPS, manual weight, and lock status at a glance.
 - **10-to-40 man support** — subgroups assigned dynamically (1 vs 2 / 1+2 vs 3+4 / 1+2+3 vs 4+5+6 / 1+2+3+4 vs 5+6+7+8)
 - **Five weight sources** — Details!, Recount, Skada, Item Level (inspect), Manual sliders. Unavailable sources are greyed out and disabled in the dropdown.
 - **Live source preview** — verify your damage meter is feeding data **before** computing a split; shows live DPS/HPS values for every roster member (or for all tracked actors when solo)
@@ -66,6 +74,10 @@ SplitWatch reads your raid roster, runs a snake-distribution algorithm balanced 
 | `/splitw preview` | Compute the split and show the preview |
 | `/splitw apply` | Apply the current split via `SetRaidSubgroup` (leader / assist only) |
 | `/splitw test` | Toggle a simulated 20-man roster for UI testing |
+| `/splitw lock <name> A\|B\|free` | Pin a player to a team (or release the lock) |
+| `/splitw lock clear` | Remove every active lock |
+| `/splitw preset save\|load\|delete <name>` | Manage named presets (constraints + locks + DPS source) |
+| `/splitw preset list` | List saved presets |
 | `/splitw reset` | Wipe all settings and reload the UI |
 
 `/splitwatch` is available as an alias for `/splitw`.
@@ -74,9 +86,9 @@ SplitWatch reads your raid roster, runs a snake-distribution algorithm balanced 
 
 Open with `/splitw`. Tabs:
 
-- **Réglages (Setup)** — general toggles (minimap icon, confirm-before-apply, summary-on-apply, auto-refresh), DPS source picker with **live preview** + Item Level scanner button, permission status
-- **Joueurs (Players)** — team-composition **Constraints** (5 toggles described above) + per-player Manual weight sliders (1–100)
-- **Aperçu (Preview)** — Compute / Apply / Toggle test buttons, source-used line, Before/After stats blocks, Team A / Team B columns with names + ilvl/DPS suffix, warnings panel (uneven teams, missing tank, unsatisfied constraint…)
+- **Réglages (Setup)** — general toggles (minimap icon, confirm-before-apply, summary-on-apply, auto-refresh, **broadcast on apply** with channel picker), DPS source picker with **live preview** + Item Level scanner button, permission status, **Presets** section (editbox + Save + scrollable list with Load / Delete per row)
+- **Composition** — team-composition **Constraints** (5 toggles), **Active locks** viewer (lists pinned players with Free buttons + Clear all), per-player Manual weight sliders (1–100)
+- **Aperçu (Preview)** — Compute / Apply / Toggle test buttons, source-used line, Before/After stats blocks, Team A / Team B columns with **right-click lock menu + hover tooltip** per row, vertical separator, warnings panel
 - **À propos (About)** — logo + version + author, slash commands list, panel opacity slider, reset window position, full changelog
 
 ## How the split works

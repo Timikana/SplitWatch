@@ -6,6 +6,42 @@ versionnage selon [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-05-14
+
+### Changements internes
+- **Refactor du panneau d'options** — l'ancien `Options/Panel.lua` monolithique (~2070 lignes) est découpé en 6 fichiers, calqué sur la convention des addons frères BossWatch / TankWatch :
+  - `Options/Widgets.lua` — fabriques de widgets partagées (addTooltip, markAsNew, makeCheck/Slider/Dropdown/Button/Label) + petits helpers (classColor, fmtNum, roleIcon)
+  - `Options/Panel.lua` — système de sections, harnais `build()`, side tabs, slash, API publique (~607 lignes)
+  - `Options/Pages/Setup.lua` — onglet Réglages
+  - `Options/Pages/Composition.lua` — onglet Composition (Contraintes + Verrouillages + Poids manuels)
+  - `Options/Pages/Preview.lua` — onglet Aperçu + les `StaticPopupDialogs` associés au workflow Apply
+  - `Options/Pages/About.lua` — onglet À propos + Changelog intégré
+- Aucun changement visible côté utilisateur — l'UI, les fonctionnalités et la base SavedVariables sont identiques. Le découpage rend chaque onglet éditable en isolation et facilite l'ajout futur de nouveaux onglets (créer `Options/Pages/<Nom>.lua`, l'enregistrer dans les deux TOCs).
+- **0 addons requis** — Details! / Recount / Skada restent optionnels, les sources Item Level (inspect) + Manuel restent les défauts sans dépendance. Sister addons : BossWatch, TankWatch.
+
+## [0.3.0] - 2026-05-12
+
+### Ajouté
+- **Verrouillages manuels** — épingle un joueur sur une équipe spécifique avant le calcul. L'algo place les verrouillés en premier puis snake-distribue les autres en respectant les locks à toutes les passes (rebalance, contraintes, melee/ranged). **Clic droit** sur un nom dans les colonnes Aperçu ouvre un menu Lock A / Lock B / Free. Icône cadenas affichée à côté des noms verrouillés. Section **"Verrouillages actifs"** sur Composition avec boutons Libérer + Tout déverrouiller. Commandes : `/splitw lock <nom> A|B|free`, `/splitw lock clear`.
+- **Annonce sur Apply** — option pour poster automatiquement la composition (Team A + Team B) dans un canal de chat après un Apply réussi. Canaux : `RAID`, `RAID_WARNING` (auto-fallback sur RAID si pas chef/assistant), `PARTY`, `SAY`. Toggle + dropdown sur Réglages → Général.
+- **Presets nommés** — sauvegarde/charge des configurations complètes (contraintes + locks + source DPS). UI sur Réglages avec champ texte + bouton Sauvegarder, liste scrollable des presets avec boutons Charger / Supprimer par ligne. Commandes : `/splitw preset save|load|delete <nom>`, `/splitw preset list`.
+- **Détection de spec via inspect** — capturé en même temps que l'ilvl (zero coût additionnel), affine la classification melee/distance pour les classes hybrides (Druide / Chaman / Hunter / Moine / Paladin). Cache 90s, fallback sur class-default quand le spec n'est pas encore inspecté.
+- **Infobulle par joueur** sur les lignes des colonnes équipe — hover affiche classe, rôle, DPS, HPS, poids manuel, statut de verrouillage.
+- **Onglet "Composition"** (renommé depuis "Joueurs") — reflète mieux le contenu : Contraintes + Verrouillages + Poids manuels.
+
+- **Deux nouvelles contraintes** :
+  - **CD externe heal par équipe** (Paladin / Prêtre / Druide / Moine **filtré au rôle HEALER** uniquement) — assure qu'au moins un soigneur avec un CD externe ciblable (BoP, Suppression de la douleur, Écorce de fer, Cocon vital) est dans chaque équipe pour mitiger les pics de dégâts tank.
+  - **Immunité soak par équipe** (Paladin / Mage / Hunter) — au moins une classe avec immunité complète aux dégâts (Bouclier divin / Bloc de glace / Aspect de la tortue) par équipe pour les mécaniques de soak.
+- **Drag-and-drop dans Aperçu** — clic gauche sur un nom dans une colonne équipe, puis clic gauche sur n'importe quel joueur de l'AUTRE équipe pour les échanger. Les deux sont auto-verrouillés pour que l'échange persiste à travers les recompute.
+- **Indicateur de mouvement** — flèche orange à côté des joueurs dont l'équipe a changé depuis le dernier Apply réussi. `lastAppliedSplit` tracké dans `SplitWatchDB` et comparé à chaque rendu.
+- **Bibliothèque de presets pré-packagée** — bouton **"Restaurer les presets"** sur Réglages → Presets charge des configs prêtes pour 4 fights de split connus : *Spirit Kings (MoP)*, *Lei Shen (MoP)*, *Council of Elders (MoP)*, *Conclave of Wind*. Chaque preset configure les contraintes selon la mécanique du fight (Mass Dispel + Decurse pour Spirit Kings, Soak immunités pour Lei Shen, etc.). RL peut éditer / supprimer comme tout autre preset.
+- **Bannière changement de roster** — l'event `GROUP_ROSTER_UPDATE` (quelqu'un join/leave) déclenche une bannière jaune sur Aperçu avec un bouton inline **"Recalculer"**. Le RL décide quand committer un nouveau split — pas d'auto-recompute, mais visibilité immédiate du roster stale.
+- **Popups de confirmation** sur les actions destructrices : *Tout déverrouiller*, *Réinitialiser tous les poids*, *Supprimer un preset*. Évite les pertes de données accidentelles via `StaticPopup_Show`.
+
+### Corrigé
+- **Liste Battle Rez** — seuls Druide / DK / Démoniste ont une résurrection en combat. Hunter / Paladin / DH retirés du tag BR (faux positif qui faisait croire à l'algo qu'il avait une BR alors que non).
+- **Liste Decurse** — Detox du Moine ne retire pas les malédictions (Magie + Maladie seulement). Monk retiré du tag Decurse ; seuls Mage / Druide / Chaman peuvent décurse.
+
 ## [0.2.0] - 2026-05-12
 
 ### Ajouté

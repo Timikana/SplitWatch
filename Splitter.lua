@@ -20,15 +20,35 @@ end
 -- is handled separately because it's a ratio, not a presence check.
 -- ============================================================
 Splitter.CONSTRAINTS = {
+    -- Battle Rez in retail: Druid (Rebirth), DK (Raise Ally), Warlock (Soulstone).
+    -- Hunter / Paladin / DH do NOT have an in-combat resurrection.
     { dbKey = "constraintBR",       id = "BR",
-      classes = { DRUID = true, DEATHKNIGHT = true, WARLOCK = true,
-                  HUNTER = true, PALADIN = true, DEMONHUNTER = true } },
+      classes = { DRUID = true, DEATHKNIGHT = true, WARLOCK = true } },
+    -- Lust givers: Shaman (Heroism/BL), Mage (Time Warp), Hunter (Primal Rage,
+    -- BM-only), Evoker (Fury of the Aspects). Hunter included as approximate;
+    -- toggle off if your hunters are MM/Survival.
     { dbKey = "constraintLust",     id = "LUST",
       classes = { SHAMAN = true, MAGE = true, HUNTER = true, EVOKER = true } },
+    -- Mass Dispel: Priest (any spec).
     { dbKey = "constraintMassDisp", id = "MASS_DISPEL",
       classes = { PRIEST = true } },
+    -- Decurse (Curse removal): Mage (Remove Curse), Druid (Remove Corruption),
+    -- Shaman (Cleanse Spirit). Monk Detox handles Magic + Disease, NOT Curse.
+    -- Paladin Cleanse Toxins handles Poison + Disease, NOT Curse.
     { dbKey = "constraintDecurse",  id = "DECURSE",
-      classes = { MAGE = true, DRUID = true, SHAMAN = true, MONK = true } },
+      classes = { MAGE = true, DRUID = true, SHAMAN = true } },
+    -- External tank CDs: Paladin (BoP / BoSac / LoH), Priest (Pain Sup / GS),
+    -- Druid (Ironbark), Monk (Life Cocoon). All require a healer spec; we
+    -- filter by entry.role = "HEALER" so a Ret Pala / Shadow Priest / Boomkin
+    -- / WW Monk doesn't falsely satisfy the constraint.
+    { dbKey = "constraintExternal", id = "EXTERNAL",
+      classes = { PALADIN = true, PRIEST = true, DRUID = true, MONK = true },
+      requireRole = "HEALER" },
+    -- Soak immunities (full damage immunity for ~5-8s): Paladin (Divine Shield),
+    -- Mage (Ice Block), Hunter (Aspect of the Turtle). Useful for soak-mechanic
+    -- fights where one player has to eat a hit and survive via immunity.
+    { dbKey = "constraintSoak",     id = "SOAK",
+      classes = { PALADIN = true, MAGE = true, HUNTER = true } },
 }
 
 -- Class → default attack range (approximate; the most common DPS spec).
@@ -49,9 +69,11 @@ local function entryRange(entry)
     return entry.attackRange or Splitter.CLASS_RANGE[entry.class] or "MELEE"
 end
 
-local function teamHasClass(team, classSet)
+local function teamHasClass(team, classSet, requireRole)
     for _, e in ipairs(team) do
-        if classSet[e.class] then return true end
+        if classSet[e.class] and (not requireRole or e.role == requireRole) then
+            return true
+        end
     end
     return false
 end
@@ -74,10 +96,28 @@ function Splitter:Compute(roster)
     local healSumA, healSumB = 0, 0  -- healing scores
     local warnings = {}
 
-    -- Tanks: alternate (1→A, 2→B, 3→A, …). If exactly 1 tank → A.
-    for i, t in ipairs(roster.tanks) do
-        t.team = (i % 2 == 1) and "A" or "B"
-        if t.team == "A" then
+    -- Tag locked entries from the saved manual locks. Locked players get
+    -- placed on their pinned team first and are skipped by all later passes.
+    local locks = SplitW:GetDB().lockedTeams or {}
+    local function applyLockTag(list)
+        for _, e in ipairs(list) do
+            e.locked = locks[e.name] -- "A" / "B" / nil
+        end
+    end
+    applyLockTag(roster.tanks)
+    applyLockTag(roster.healers)
+    applyLockTag(roster.dps)
+
+    -- Tanks: respect lock first, otherwise alternate (1→A, 2→B, 3→A …).
+    local autoTankIdx = 0
+    for _, t in ipairs(roster.tanks) do
+        local target = t.locked
+        if not target then
+            autoTankIdx = autoTankIdx + 1
+            target = (autoTankIdx % 2 == 1) and "A" or "B"
+        end
+        t.team = target
+        if target == "A" then
             table.insert(A, t); tanksA = tanksA + 1
         else
             table.insert(B, t); tanksB = tanksB + 1
@@ -89,35 +129,60 @@ function Splitter:Compute(roster)
         table.insert(warnings, "NO_TANK")
     end
 
-    -- Healers: sort by HPS desc, snake-distribute on healSum (balances by raw
-    -- healing throughput so each team gets comparable healing power, not just
-    -- a matching healer count).
+    -- Healers: place locked first to seed the score totals, then snake the rest
+    -- by HPS desc.
     table.sort(roster.healers, function(x, y)
         return resolveHealWeight(x) > resolveHealWeight(y)
     end)
     for _, h in ipairs(roster.healers) do
-        local w = resolveHealWeight(h)
-        if healSumA <= healSumB then
-            h.team = "A"
-            table.insert(A, h); healsA = healsA + 1; healSumA = healSumA + w
-        else
-            h.team = "B"
-            table.insert(B, h); healsB = healsB + 1; healSumB = healSumB + w
+        if h.locked then
+            local w = resolveHealWeight(h)
+            h.team = h.locked
+            if h.locked == "A" then
+                table.insert(A, h); healsA = healsA + 1; healSumA = healSumA + w
+            else
+                table.insert(B, h); healsB = healsB + 1; healSumB = healSumB + w
+            end
+        end
+    end
+    for _, h in ipairs(roster.healers) do
+        if not h.locked then
+            local w = resolveHealWeight(h)
+            if healSumA <= healSumB then
+                h.team = "A"
+                table.insert(A, h); healsA = healsA + 1; healSumA = healSumA + w
+            else
+                h.team = "B"
+                table.insert(B, h); healsB = healsB + 1; healSumB = healSumB + w
+            end
         end
     end
 
-    -- DPS: sort by weight desc, then put each on the lighter team (greedy snake).
+    -- DPS: locked first (seed scores), then snake the rest by DPS desc.
     table.sort(roster.dps, function(x, y)
         return resolveDmgWeight(x) > resolveDmgWeight(y)
     end)
     for _, d in ipairs(roster.dps) do
-        local w = resolveDmgWeight(d)
-        if sumA <= sumB then
-            d.team = "A"
-            table.insert(A, d); dpsA = dpsA + 1; sumA = sumA + w
-        else
-            d.team = "B"
-            table.insert(B, d); dpsB = dpsB + 1; sumB = sumB + w
+        if d.locked then
+            local w = resolveDmgWeight(d)
+            d.team = d.locked
+            if d.locked == "A" then
+                table.insert(A, d); dpsA = dpsA + 1; sumA = sumA + w
+            else
+                table.insert(B, d); dpsB = dpsB + 1; sumB = sumB + w
+            end
+        end
+    end
+    for _, d in ipairs(roster.dps) do
+        if not d.locked then
+            local w = resolveDmgWeight(d)
+            if sumA <= sumB then
+                d.team = "A"
+                table.insert(A, d); dpsA = dpsA + 1; sumA = sumA + w
+            else
+                d.team = "B"
+                table.insert(B, d); dpsB = dpsB + 1; sumB = sumB + w
+            end
         end
     end
 
@@ -130,7 +195,7 @@ function Splitter:Compute(roster)
     local function _moveWeakestDps(fromTeam, fromIsA)
         for i = #fromTeam, 1, -1 do
             local e = fromTeam[i]
-            if e.role ~= "TANK" and e.role ~= "HEALER" then
+            if e.role ~= "TANK" and e.role ~= "HEALER" and not e.locked then
                 table.remove(fromTeam, i)
                 local w = resolveDmgWeight(e)
                 if fromIsA then
@@ -160,8 +225,8 @@ function Splitter:Compute(roster)
     -- in (lackingTeam) that does NOT match the classes. Pick the swap that
     -- minimises |scoreA - scoreB| change.
     local function ensurePresence(constraint)
-        local hasA = teamHasClass(A, constraint.classes)
-        local hasB = teamHasClass(B, constraint.classes)
+        local hasA = teamHasClass(A, constraint.classes, constraint.requireRole)
+        local hasB = teamHasClass(B, constraint.classes, constraint.requireRole)
         if hasA and hasB then return true end
         if not hasA and not hasB then
             table.insert(warnings, "CONSTRAINT_MISSING_" .. constraint.id)
@@ -170,12 +235,18 @@ function Splitter:Compute(roster)
         local lacking      = hasA and B or A
         local lackingIsA   = not hasA
         local source       = hasA and A or B
+        -- For role-filtered constraints (e.g. EXTERNAL needs a HEALER), the
+        -- swap must move a player of THAT role between teams. Default to DPS
+        -- swaps for pure-class constraints.
+        local swapRole     = constraint.requireRole or "DAMAGER"
         local bestI, bestJ, bestDelta
         for i, candidate in ipairs(source) do
-            if candidate.role == "DAMAGER" and constraint.classes[candidate.class] then
+            if candidate.role == swapRole and constraint.classes[candidate.class]
+               and not candidate.locked then
                 for j, target in ipairs(lacking) do
-                    if target.role == "DAMAGER"
-                       and not constraint.classes[target.class] then
+                    if target.role == swapRole
+                       and not constraint.classes[target.class]
+                       and not target.locked then
                         local wc = resolveDmgWeight(candidate)
                         local wt = resolveDmgWeight(target)
                         -- Score delta on `lacking`: gains wc, loses wt → +(wc-wt)
@@ -227,9 +298,9 @@ function Splitter:Compute(roster)
             -- Find a melee in source + a ranged in target with similar score.
             local bestI, bestJ, bestDelta
             for i, src in ipairs(fromTeam) do
-                if src.role == "DAMAGER" and entryRange(src) == "MELEE" then
+                if src.role == "DAMAGER" and entryRange(src) == "MELEE" and not src.locked then
                     for j, tgt in ipairs(toTeam) do
-                        if tgt.role == "DAMAGER" and entryRange(tgt) == "RANGED" then
+                        if tgt.role == "DAMAGER" and entryRange(tgt) == "RANGED" and not tgt.locked then
                             local ws, wt = resolveDmgWeight(src), resolveDmgWeight(tgt)
                             local delta = math.abs((sumA - sumB)
                                 + (fromIsA and (wt - ws) or (ws - wt)))

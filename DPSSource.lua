@@ -211,7 +211,44 @@ end
 -- number) — a high-ilvl character is treated as both a strong damager and
 -- a strong healer for balancing purposes.
 -- ============================================================
-local ilvlCache = {}        -- name -> { ilvl = N, time = T }
+local ilvlCache = {}        -- name -> { ilvl = N, time = T, range = "MELEE"|"RANGED"|nil }
+
+-- Spec ID → attack range. Captured at inspect time alongside ilvl so
+-- melee/ranged classification is accurate for hybrid classes (Druid /
+-- Shaman / Hunter / Paladin / Monk DPS specs all have melee + ranged
+-- variants). Spec IDs are stable across patches.
+local SPEC_RANGE = {
+    -- Druid
+    [102] = "RANGED",  -- Balance
+    [103] = "MELEE",   -- Feral
+    -- Hunter
+    [253] = "RANGED",  -- Beast Mastery
+    [254] = "RANGED",  -- Marksmanship
+    [255] = "MELEE",   -- Survival
+    -- Shaman
+    [262] = "RANGED",  -- Elemental
+    [263] = "MELEE",   -- Enhancement
+    -- Paladin
+    [70]  = "MELEE",   -- Retribution
+    -- Monk
+    [269] = "MELEE",   -- Windwalker
+    -- Tank / healer specs return their canonical range too (used for
+    -- completeness even though only DPS specs flow into melee/ranged
+    -- balancing):
+    [104] = "MELEE",   -- Druid Guardian
+    [250] = "MELEE",   -- DK Blood
+    [581] = "MELEE",   -- DH Vengeance
+    [268] = "MELEE",   -- Monk Brewmaster
+    [66]  = "MELEE",   -- Paladin Protection
+    [73]  = "MELEE",   -- Warrior Protection
+}
+
+-- Public access for Splitter to enrich roster entries.
+local DPSSource = DPSSource
+function DPSSource:GetCachedRange(name)
+    local e = ilvlCache[name]
+    return e and e.range or nil
+end
 local ilvlQueue = {}        -- list of unit IDs awaiting inspect
 local ilvlBusy = false
 local ILVL_CACHE_TTL = 90   -- seconds before we refetch
@@ -253,7 +290,18 @@ ilvlFrame:SetScript("OnEvent", function(_, _, guid)
             end
             if type(ilvl) == "number" and ilvl > 0 then
                 local n = UnitName(unit)
-                if n then ilvlCache[n] = { ilvl = ilvl, time = GetTime() } end
+                if n then
+                    -- Capture spec at the same time — same inspect window, no
+                    -- extra requests.
+                    local range
+                    if GetInspectSpecialization then
+                        local ok2, sid = pcall(GetInspectSpecialization, unit)
+                        if ok2 and type(sid) == "number" then
+                            range = SPEC_RANGE[sid]
+                        end
+                    end
+                    ilvlCache[n] = { ilvl = ilvl, time = GetTime(), range = range }
+                end
             end
             pcall(ClearInspectPlayer)
             break
