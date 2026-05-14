@@ -41,6 +41,41 @@ function O.Pages.about(parent)
         " |cff888888(" .. L["alias"] .. ": /splitwatch)|r\n" ..
         "|cffaaaaaa" .. L["Sister addons"] .. ":|r BossWatch, TankWatch")
 
+    -- ---- Links (GitHub / CurseForge / Wago / Discord) ----
+    makeSection(parent, L["Links"], 14, -160, "about.links")
+
+    local function urlField(yOff, label, url)
+        local lab = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        lab:SetPoint("TOPLEFT", parent, "TOPLEFT", 14, yOff)
+        lab:SetText(label)
+        _registerInSection(lab)
+
+        local eb = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
+        eb:SetSize(440, 22)
+        eb:SetPoint("TOPLEFT", parent, "TOPLEFT", 20, yOff - 16)
+        eb:SetAutoFocus(false)
+        eb:SetFontObject("GameFontHighlightSmall")
+        eb:SetText(url)
+        eb:SetCursorPosition(0)
+        eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+        eb:SetScript("OnEnterPressed",  function(self) self:ClearFocus() end)
+        eb:SetScript("OnMouseDown", function(self) self:HighlightText(); self:SetFocus() end)
+        addTooltip(eb, L["Click to select, then Ctrl+C to copy."])
+        _registerInSection(eb)
+        return eb
+    end
+
+    urlField(-190, "|cffffffff" .. L["GitHub repository:"] .. "|r",
+        "https://github.com/Timikana/SplitWatch")
+    urlField(-240, "|cffffffff" .. L["Report an issue:"] .. "|r",
+        "https://github.com/Timikana/SplitWatch/issues")
+    urlField(-290, "|cffeda14a" .. L["CurseForge:"] .. "|r",
+        "https://www.curseforge.com/wow/addons/splitwatch")
+    urlField(-340, "|cffb371ff" .. L["Wago:"] .. "|r",
+        "https://addons.wago.io/addons/splitwatch")
+    urlField(-390, "|cff5865f2" .. L["Discord (support / bugs / suggestions):"] .. "|r",
+        "https://discord.gg/uFmxwexQ4P")
+
     -- ---- Slash commands ----
     makeSection(parent, L["Slash commands"], 14, -160, "about.slash")
     local cmds = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -94,6 +129,11 @@ function O.Pages.about(parent)
     -- ---- Changelog (chained at the bottom) ----
     makeSection(parent, L["Changelog"], 14, -400, "about.changelog")
     local entries = {
+        { ver = "0.3.2", date = "2026-05-14", lines = {
+            L["• New \"Links\" section on the About tab — clickable GitHub / Issues / CurseForge / Wago / Discord URL fields. Same convention as BossWatch / TankWatch."],
+            L["• Discord support server now has a dedicated SplitWatch category (#sw-changelog, #sw-bugs, #sw-support, #sw-suggestions). Same BWTW guild as BossWatch / TankWatch."],
+            L["• 0 required addons. Sister addons: BossWatch, TankWatch."],
+        }},
         { ver = "0.3.1", date = "2026-05-14", lines = {
             L["• Internal refactor of the options panel: the ~2070-line Panel.lua is split into 6 files (Widgets.lua + a slimmer Panel.lua + 4 tab files under Options/Pages/). Mirrors the BossWatch / TankWatch convention. Zero user-visible change."],
             L["• 0 required addons — Details!/Recount/Skada/Item Level/Manual all still optional. Sister addons to BossWatch + TankWatch."],

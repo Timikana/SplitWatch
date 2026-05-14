@@ -6,6 +6,23 @@ versionnage selon [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-05-14
+
+### Ajouté
+- **Section "Liens" sur l'onglet À propos** — 5 champs cliquables (sélection + Ctrl+C pour copier) alignés sur la convention des addons frères BossWatch / TankWatch :
+  - **Dépôt GitHub** — `https://github.com/Timikana/SplitWatch`
+  - **Signaler un bug** — `https://github.com/Timikana/SplitWatch/issues`
+  - **CurseForge** — `https://www.curseforge.com/wow/addons/splitwatch`
+  - **Wago** — `https://addons.wago.io/addons/splitwatch`
+  - **Discord (support / bugs / suggestions)** — invitation vers le serveur communautaire partagé BWTW (catégorie 🧩 SPLITWATCH avec forums dédiés `#sw-bugs`, `#sw-support`, `#sw-suggestions` + salon `#sw-changelog`)
+- Section repliable + reset par section comme les autres blocs de À propos.
+
+### Outils dev
+- `scripts/_post_discord.py <version>` — poste le bloc CHANGELOG d'une version donnée vers le webhook `#sw-changelog` (couleur dorée `#FFD100` pour les stables, orange pour les beta). Couplage 1:1 avec BossWatch / TankWatch — utile manuellement après chaque tag.
+- `scripts/extract_changelog.sh <version>` — extrait un bloc `## [X.Y.Z]` de `CHANGELOG.md`, utilisable pour `git tag -a vX.Y.Z -F -` ou la commande Discord ci-dessus.
+
+- **0 addons requis**. Sister addons : BossWatch, TankWatch.
+
 ## [0.3.1] - 2026-05-14
 
 ### Changements internes
