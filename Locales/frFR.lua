@@ -379,3 +379,20 @@ L["Reset this section to default values."] = "Réinitialise cette section aux va
 -- v0.3.1
 L["• Internal refactor of the options panel: the ~2070-line Panel.lua is split into 6 files (Widgets.lua + a slimmer Panel.lua + 4 tab files under Options/Pages/). Mirrors the BossWatch / TankWatch convention. Zero user-visible change."] =
     "• Refactor interne du panneau d'options : l'ancien Panel.lua (~2070 lignes) est découpé en 6 fichiers (Widgets.lua + un Panel.lua allégé + 4 fichiers d'onglet sous Options/Pages/). Calqué sur la convention BossWatch / TankWatch. Zéro changement visible côté utilisateur."
+
+-- About / Links
+L["Links"] = "Liens"
+L["GitHub repository:"] = "Dépôt GitHub :"
+L["Report an issue:"] = "Signaler un bug :"
+L["CurseForge:"] = "CurseForge :"
+L["Wago:"] = "Wago :"
+L["Discord (support / bugs / suggestions):"] = "Discord (support / bugs / suggestions) :"
+L["Click to select, then Ctrl+C to copy."] = "Clic pour sélectionner, puis Ctrl+C pour copier."
+
+-- v0.3.2
+L["• New \"Links\" section on the About tab — clickable GitHub / Issues / CurseForge / Wago / Discord URL fields. Same convention as BossWatch / TankWatch."] =
+    "• Nouvelle section « Liens » sur l'onglet À propos — champs URL cliquables GitHub / Bugs / CurseForge / Wago / Discord. Même convention que BossWatch / TankWatch."
+L["• Discord support server now has a dedicated SplitWatch category (#sw-changelog, #sw-bugs, #sw-support, #sw-suggestions). Same BWTW guild as BossWatch / TankWatch."] =
+    "• Le serveur Discord d'entraide a maintenant une catégorie SplitWatch dédiée (#sw-changelog, #sw-bugs, #sw-support, #sw-suggestions). Même guild BWTW que BossWatch / TankWatch."
+L["• 0 required addons. Sister addons: BossWatch, TankWatch."] =
+    "• 0 addon requis. Addons frères : BossWatch, TankWatch."
