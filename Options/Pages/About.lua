@@ -94,6 +94,10 @@ function O.Pages.about(parent)
     -- ---- Changelog (chained at the bottom) ----
     makeSection(parent, L["Changelog"], 14, -400, "about.changelog")
     local entries = {
+        { ver = "0.3.1", date = "2026-05-14", lines = {
+            L["• Internal refactor of the options panel: the ~2070-line Panel.lua is split into 6 files (Widgets.lua + a slimmer Panel.lua + 4 tab files under Options/Pages/). Mirrors the BossWatch / TankWatch convention. Zero user-visible change."],
+            L["• 0 required addons — Details!/Recount/Skada/Item Level/Manual all still optional. Sister addons to BossWatch + TankWatch."],
+        }},
         { ver = "0.3.0", date = "2026-05-12", lines = {
             L["• 0 required addons — Details!/Recount/Skada/Item Level/Manual all still optional / built-in."],
             L["• Sister addon to BossWatch + TankWatch."],

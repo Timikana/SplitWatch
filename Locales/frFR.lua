@@ -375,3 +375,7 @@ L["Details!/Recount/Skada read live DPS+HPS from those addons when loaded. Manua
     "Details!/Recount/Skada lisent DPS et HPS en direct depuis ces addons quand ils sont chargés. Manuel utilise les sliders par joueur de l'onglet Poids."
 L["Click to collapse/expand this section."] = "Clic pour réduire/déplier cette section."
 L["Reset this section to default values."] = "Réinitialise cette section aux valeurs par défaut."
+
+-- v0.3.1
+L["• Internal refactor of the options panel: the ~2070-line Panel.lua is split into 6 files (Widgets.lua + a slimmer Panel.lua + 4 tab files under Options/Pages/). Mirrors the BossWatch / TankWatch convention. Zero user-visible change."] =
+    "• Refactor interne du panneau d'options : l'ancien Panel.lua (~2070 lignes) est découpé en 6 fichiers (Widgets.lua + un Panel.lua allégé + 4 fichiers d'onglet sous Options/Pages/). Calqué sur la convention BossWatch / TankWatch. Zéro changement visible côté utilisateur."

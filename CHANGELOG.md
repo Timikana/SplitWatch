@@ -6,6 +6,19 @@ versionnage selon [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-05-14
+
+### Changements internes
+- **Refactor du panneau d'options** — l'ancien `Options/Panel.lua` monolithique (~2070 lignes) est découpé en 6 fichiers, calqué sur la convention des addons frères BossWatch / TankWatch :
+  - `Options/Widgets.lua` — fabriques de widgets partagées (addTooltip, markAsNew, makeCheck/Slider/Dropdown/Button/Label) + petits helpers (classColor, fmtNum, roleIcon)
+  - `Options/Panel.lua` — système de sections, harnais `build()`, side tabs, slash, API publique (~607 lignes)
+  - `Options/Pages/Setup.lua` — onglet Réglages
+  - `Options/Pages/Composition.lua` — onglet Composition (Contraintes + Verrouillages + Poids manuels)
+  - `Options/Pages/Preview.lua` — onglet Aperçu + les `StaticPopupDialogs` associés au workflow Apply
+  - `Options/Pages/About.lua` — onglet À propos + Changelog intégré
+- Aucun changement visible côté utilisateur — l'UI, les fonctionnalités et la base SavedVariables sont identiques. Le découpage rend chaque onglet éditable en isolation et facilite l'ajout futur de nouveaux onglets (créer `Options/Pages/<Nom>.lua`, l'enregistrer dans les deux TOCs).
+- **0 addons requis** — Details! / Recount / Skada restent optionnels, les sources Item Level (inspect) + Manuel restent les défauts sans dépendance. Sister addons : BossWatch, TankWatch.
+
 ## [0.3.0] - 2026-05-12
 
 ### Ajouté
