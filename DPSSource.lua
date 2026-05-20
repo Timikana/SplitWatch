@@ -110,11 +110,44 @@ end
 local function _detailsCombat()
     local Details = _G.Details
     if not Details then return nil end
-    local ok, c = pcall(function() return Details:GetCurrentCombat() end)
-    if ok and c and c.GetCombatTime and c:GetCombatTime() > 0 then return c end
-    ok, c = pcall(function() return Details:GetCombat(1) end)
-    if ok and c then return c end
-    return nil
+    -- Try multiple combat sources and pick the first one that actually has
+    -- actors. Details' API has shifted over versions and the "right" segment
+    -- depends on whether the user is currently fighting, just out of combat,
+    -- or looking at the overall window. Probe each candidate, returning the
+    -- first that returns a non-empty actor list.
+    local function tryGet(getter)
+        local ok, c = pcall(getter)
+        if ok and type(c) == "table" then return c end
+        return nil
+    end
+    local function hasActors(c)
+        if not c or not c.GetActorList then return false end
+        for _, attr in ipairs({1, 2}) do
+            local ok, list = pcall(c.GetActorList, c, attr)
+            if ok and type(list) == "table" and #list > 0 then return true end
+        end
+        return false
+    end
+    local candidates = {
+        function() return Details:GetCurrentCombat() end,
+        function() return Details:GetCombat(0) end,
+        function() return Details:GetCombat(1) end,
+        function() return Details:GetCombat(2) end,
+        function() return Details:GetCombat("overall") end,
+        function() return Details:GetCombat(-1) end,
+    }
+    -- Best-data preference: prefer a candidate with actors. As a last resort
+    -- (no candidate has actors), still return the current combat so callers
+    -- can at least see "combat exists but is empty".
+    local fallback
+    for _, getter in ipairs(candidates) do
+        local c = tryGet(getter)
+        if c then
+            if hasActors(c) then return c end
+            fallback = fallback or c
+        end
+    end
+    return fallback
 end
 
 local function _detailsActors(combat, attr)
@@ -126,13 +159,24 @@ local function _detailsActors(combat, attr)
     return nil
 end
 
+-- Cross-realm normalisation: GetRaidRosterInfo returns "Name-Realm" for
+-- cross-realm players; damage meters may store the same actor under either
+-- "Name-Realm" or just "Name" depending on how the combat log reported it.
+-- We compare both the full name and the short-name-only form on both sides.
+local function _shortName(n) return type(n) == "string" and (n:match("^([^-]+)") or n) or n end
+local function _nameMatch(actorName, lookup)
+    if not actorName or not lookup then return false end
+    if actorName == lookup then return true end
+    return _shortName(actorName) == _shortName(lookup)
+end
+
 local function getFromDetails(name, attr)
     local combat = _detailsCombat()
     local actors = _detailsActors(combat, attr)
     if not actors then return nil end
     local actor
     for _, a in ipairs(actors) do
-        if a.nome == name or a.name == name then actor = a; break end
+        if _nameMatch(a.nome, name) or _nameMatch(a.name, name) then actor = a; break end
     end
     if not actor then return nil end
     local total = actor.total or 0
@@ -147,10 +191,11 @@ end
 local function getFromRecount(name, kind)  -- kind = "damage" | "healing"
     local Recount = _G.Recount
     if not Recount then return nil end
+    local short = _shortName(name)
     if Recount.GetCurrentDataSet then
         local ok, set = pcall(Recount.GetCurrentDataSet, Recount)
-        if ok and set and set[name] then
-            local p = set[name]
+        if ok and set and (set[name] or set[short]) then
+            local p = set[name] or set[short]
             if kind == "healing" then
                 return tonumber(p.HPS or p.hps
                     or (p.Healing and p.ActiveTime and p.ActiveTime > 0 and p.Healing / p.ActiveTime))
@@ -162,8 +207,8 @@ local function getFromRecount(name, kind)  -- kind = "damage" | "healing"
     local cur = Recount.CurrentDataCollect
     if Recount.db2 and Recount.db2.combats and cur and Recount.db2.combats[cur] then
         local fight = Recount.db2.combats[cur].Fight
-        if fight and fight[name] then
-            local p = fight[name]
+        if fight and (fight[name] or fight[short]) then
+            local p = fight[name] or fight[short]
             local val  = (kind == "healing") and (p.Healing or 0) or (p.Damage or 0)
             local time = p.ActiveTime or p.TimeDamage or 1
             if time > 0 then return val / time end
@@ -184,7 +229,7 @@ local function getFromSkada(name, kind)
     end
     if not set or not set.players then return nil end
     for _, p in ipairs(set.players) do
-        if p.name == name then
+        if _nameMatch(p.name, name) then
             local val
             if kind == "healing" then
                 val = p.healing or p.healingdone or p.heal or 0

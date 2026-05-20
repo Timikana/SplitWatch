@@ -129,6 +129,12 @@ function O.Pages.about(parent)
     -- ---- Changelog (chained at the bottom) ----
     makeSection(parent, L["Changelog"], 14, -400, "about.changelog")
     local entries = {
+        { ver = "0.3.4", date = "2026-05-14", lines = {
+            L["• Fix: Details! source preview was empty when the current combat had no actors yet. The reader now probes multiple combat segments and uses the first one with data."],
+            L["• Fix: cross-realm player names (Name-Realm) now match correctly against meters that store them as short names — both forms are tried."],
+            L["• New /splitw dps debug command — dumps which actors the active source returns and matches them against the roster."],
+            L["• 0 required addons. Sister addons: BossWatch, TankWatch."],
+        }},
         { ver = "0.3.3", date = "2026-05-14", lines = {
             L["• Fix: Apply was failing with \"group is full\" when a target subgroup already contained an off-split player. BuildPlan now pre-fills each subgroup's counter with current occupancy (non-team members keep their slot)."],
             L["• Apply minimises moves: players whose current subgroup is already in their team's target groups stay put rather than being shuffled around."],

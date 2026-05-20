@@ -6,6 +6,17 @@ versionnage selon [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-05-14
+
+### Corrigé
+- **Lecture Details! plus robuste** — `_detailsCombat` essaie maintenant plusieurs segments (`GetCurrentCombat`, `GetCombat(0/1/2/-1)`, `GetCombat("overall")`) et garde le premier qui contient effectivement des acteurs. Évite les cas où le combat « courant » est vide juste après un /reload mais la data réelle est dans un autre segment.
+- **Matching noms cross-realm** — Details / Recount / Skada stockent parfois les joueurs sous leur nom court (« Tenarzi ») alors que `GetRaidRosterInfo` retourne le nom qualifié (« Tenarzi-ConseildesOmbres »). Le comparateur teste maintenant nom complet ET nom court des deux côtés.
+
+### Ajouté
+- **Commande `/splitw dps`** (ou `/splitw debug`) — dump la source active, la liste des acteurs lus depuis le damage meter, et le résultat de `:GetDPS / :GetHPS` pour chaque membre du roster. Utile pour diagnostiquer pourquoi un joueur n'apparaît pas avec ses valeurs.
+
+- **0 addons requis**. Sister addons : BossWatch, TankWatch.
+
 ## [0.3.3] - 2026-05-14
 
 ### Corrigé
