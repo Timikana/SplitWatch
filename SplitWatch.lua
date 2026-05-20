@@ -435,6 +435,36 @@ SlashCmdList["SPLITWATCH"] = function(msg)
         else
             print("|cffffd100SplitWatch:|r " .. L["usage: /splitw lock <name> A|B|free  |  /splitw lock clear"])
         end
+    elseif cmd == "dps" or cmd == "debug" then
+        -- Dump what the active source returns + how it matches the roster.
+        -- Useful when DPS/HPS values don't show up in the preview as expected.
+        local src = SplitW:GetDB().dpsSource or "?"
+        print(string.format("|cffffd100SplitWatch debug:|r source=%s available=%s",
+            src, tostring(SplitW.DPSSource and SplitW.DPSSource:IsAvailable(src))))
+        local list = SplitW.DPSSource and SplitW.DPSSource:ListActors() or {}
+        print(string.format("  ListActors → %d actors:", #list))
+        for i, a in ipairs(list) do
+            print(string.format("    %d. name=%s class=%s dps=%s hps=%s",
+                i, tostring(a.name), tostring(a.class), tostring(a.dps), tostring(a.hps)))
+            if i >= 20 then print("    ..."); break end
+        end
+        local roster = SplitW.Roster:Scan()
+        print(string.format("  Roster (%d members):", roster.raid))
+        for _, e in ipairs(roster.tanks)   do
+            print(string.format("    TANK   %s  DPS=%s HPS=%s",
+                e.name, tostring(SplitW.DPSSource:GetDPS(e.name)),
+                tostring(SplitW.DPSSource:GetHPS(e.name))))
+        end
+        for _, e in ipairs(roster.healers) do
+            print(string.format("    HEALER %s  DPS=%s HPS=%s",
+                e.name, tostring(SplitW.DPSSource:GetDPS(e.name)),
+                tostring(SplitW.DPSSource:GetHPS(e.name))))
+        end
+        for _, e in ipairs(roster.dps) do
+            print(string.format("    DPS    %s  DPS=%s HPS=%s",
+                e.name, tostring(SplitW.DPSSource:GetDPS(e.name)),
+                tostring(SplitW.DPSSource:GetHPS(e.name))))
+        end
     elseif cmd == "reset" then
         SplitWatchDB = nil
         ReloadUI()

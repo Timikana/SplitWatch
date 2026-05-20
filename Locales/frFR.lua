@@ -402,3 +402,11 @@ L["• Fix: Apply was failing with \"group is full\" when a target subgroup alre
     "• Fix : Appliquer échouait avec « Votre groupe est complet » quand un sous-groupe cible contenait déjà un joueur hors-split. BuildPlan pré-remplit maintenant le compteur de chaque sous-groupe avec la population actuelle (les non-membres de l'équipe gardent leur slot)."
 L["• Apply minimises moves: players whose current subgroup is already in their team's target groups stay put rather than being shuffled around."] =
     "• Apply minimise les déplacements : les joueurs dont le sous-groupe actuel fait déjà partie des groupes cibles de leur équipe restent en place plutôt que d'être déplacés inutilement."
+
+-- v0.3.4
+L["• Fix: Details! source preview was empty when the current combat had no actors yet. The reader now probes multiple combat segments and uses the first one with data."] =
+    "• Fix : l'aperçu de la source Details! était vide quand le combat courant n'avait pas encore d'acteurs. Le lecteur sonde maintenant plusieurs segments et garde le premier avec des données."
+L["• Fix: cross-realm player names (Name-Realm) now match correctly against meters that store them as short names — both forms are tried."] =
+    "• Fix : les noms de joueurs cross-realm (Nom-Royaume) sont maintenant matchés correctement avec les damage meters qui les stockent sous forme courte — les deux variantes sont testées."
+L["• New /splitw dps debug command — dumps which actors the active source returns and matches them against the roster."] =
+    "• Nouvelle commande /splitw dps debug — dump les acteurs renvoyés par la source active et les rapproche du roster."
