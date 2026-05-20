@@ -97,7 +97,7 @@ function Apply:Run()
         local r = SplitW.Roster:Scan()
         db.lastSplit = SplitW.Splitter:Compute(r)
     end
-    local plan = SplitW.Splitter:BuildPlan(db.lastSplit)
+    local plan = SplitW.Splitter:BuildPlan(db.lastSplit, SplitW.Roster:Scan())
     if #plan == 0 then
         print("|cffffd100SplitWatch:|r " .. L["nothing to do — split already matches"])
         return

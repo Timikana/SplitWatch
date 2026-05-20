@@ -129,6 +129,11 @@ function O.Pages.about(parent)
     -- ---- Changelog (chained at the bottom) ----
     makeSection(parent, L["Changelog"], 14, -400, "about.changelog")
     local entries = {
+        { ver = "0.3.3", date = "2026-05-14", lines = {
+            L["• Fix: Apply was failing with \"group is full\" when a target subgroup already contained an off-split player. BuildPlan now pre-fills each subgroup's counter with current occupancy (non-team members keep their slot)."],
+            L["• Apply minimises moves: players whose current subgroup is already in their team's target groups stay put rather than being shuffled around."],
+            L["• 0 required addons. Sister addons: BossWatch, TankWatch."],
+        }},
         { ver = "0.3.2", date = "2026-05-14", lines = {
             L["• New \"Links\" section on the About tab — clickable GitHub / Issues / CurseForge / Wago / Discord URL fields. Same convention as BossWatch / TankWatch."],
             L["• Discord support server now has a dedicated SplitWatch category (#sw-changelog, #sw-bugs, #sw-support, #sw-suggestions). Same BWTW guild as BossWatch / TankWatch."],

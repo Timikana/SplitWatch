@@ -6,6 +6,19 @@ versionnage selon [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-05-14
+
+### Corrigé
+- **Apply échouait avec « Votre groupe est complet »** quand un sous-groupe cible contenait déjà un joueur hors-split (membre absent, joueur non scanné, etc.). `Splitter:BuildPlan` partait du compteur 0 par sous-groupe et empilait jusqu'à 5 joueurs sans regarder la population réelle → dépassement silencieux côté `SetRaidSubgroup`.
+- **Nouvelle logique** :
+  1. Pré-remplit le compteur de chaque sous-groupe cible avec les joueurs **non-membres de l'équipe en cours** (ils gardent leur slot actuel).
+  2. Préfère laisser un joueur dans son sous-groupe actuel s'il fait partie des sous-groupes cibles et qu'il reste de la place — moins de déplacements `SetRaidSubgroup`, application plus rapide.
+  3. Répartit automatiquement entre les sous-groupes du même côté (G3 puis G4 pour Team B) quand le premier est saturé.
+
+### Notes techniques
+- Cas résiduel non encore couvert : si **les deux sous-groupes cibles** sont saturés par des joueurs qui n'appartiennent à aucune des deux équipes calculées (cas rare en pratique), l'algo essaie quand même et Blizzard refuse. Le fallback `SwapRaidSubgroup` arrive en v0.3.4 si nécessaire.
+- **0 addons requis**. Sister addons : BossWatch, TankWatch.
+
 ## [0.3.2] - 2026-05-14
 
 ### Ajouté
