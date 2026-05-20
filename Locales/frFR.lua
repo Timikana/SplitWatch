@@ -396,3 +396,9 @@ L["• Discord support server now has a dedicated SplitWatch category (#sw-chang
     "• Le serveur Discord d'entraide a maintenant une catégorie SplitWatch dédiée (#sw-changelog, #sw-bugs, #sw-support, #sw-suggestions). Même guild BWTW que BossWatch / TankWatch."
 L["• 0 required addons. Sister addons: BossWatch, TankWatch."] =
     "• 0 addon requis. Addons frères : BossWatch, TankWatch."
+
+-- v0.3.3
+L["• Fix: Apply was failing with \"group is full\" when a target subgroup already contained an off-split player. BuildPlan now pre-fills each subgroup's counter with current occupancy (non-team members keep their slot)."] =
+    "• Fix : Appliquer échouait avec « Votre groupe est complet » quand un sous-groupe cible contenait déjà un joueur hors-split. BuildPlan pré-remplit maintenant le compteur de chaque sous-groupe avec la population actuelle (les non-membres de l'équipe gardent leur slot)."
+L["• Apply minimises moves: players whose current subgroup is already in their team's target groups stay put rather than being shuffled around."] =
+    "• Apply minimise les déplacements : les joueurs dont le sous-groupe actuel fait déjà partie des groupes cibles de leur équipe restent en place plutôt que d'être déplacés inutilement."

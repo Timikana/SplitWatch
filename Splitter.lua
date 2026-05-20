@@ -372,17 +372,46 @@ end
 -- Fills team A subgroups left-to-right (5 per slot), then team B.
 -- Skips no-op moves (player already in correct subgroup).
 -- ============================================================
-function Splitter:BuildPlan(split)
+function Splitter:BuildPlan(split, roster)
     local plan = {}
     local aGroups, bGroups = self:GetTargetGroups(split)
 
+    -- For each team, count[g] tracks the FUTURE population of group g while
+    -- we assign team members. It starts pre-populated with raid members who
+    -- are NOT in this team (they keep their current subgroup, or get
+    -- re-assigned later by the OTHER team's pass — but for capacity-planning
+    -- we treat them as occupying their current slot). This fixes the case
+    -- where a target subgroup already contains an off-split player (offline,
+    -- pet, non-split-member) and the previous logic over-packed it past 5/5,
+    -- causing SetRaidSubgroup to silently fail with "groupe complet".
     local function assignTeam(team, groups)
+        local inThisTeam = {}
+        for _, e in ipairs(team) do inThisTeam[e.raidIndex] = true end
+
         local count = {}
         for _, g in ipairs(groups) do count[g] = 0 end
+        if roster then
+            for _, list in ipairs({roster.tanks or {}, roster.healers or {}, roster.dps or {}}) do
+                for _, e in ipairs(list) do
+                    local g = e.subgroup
+                    if g and count[g] ~= nil and not inThisTeam[e.raidIndex] then
+                        count[g] = count[g] + 1
+                    end
+                end
+            end
+        end
+
         for _, e in ipairs(team) do
             local target
-            for _, g in ipairs(groups) do
-                if count[g] < 5 then target = g; break end
+            -- Prefer keeping the player in their current subgroup if it's
+            -- one of this team's target groups and still has room — this
+            -- minimises the number of moves and keeps the apply faster.
+            if e.subgroup and count[e.subgroup] ~= nil and count[e.subgroup] < 5 then
+                target = e.subgroup
+            else
+                for _, g in ipairs(groups) do
+                    if count[g] < 5 then target = g; break end
+                end
             end
             if not target then target = groups[#groups] end -- overflow safety
             count[target] = count[target] + 1
