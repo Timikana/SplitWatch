@@ -1,8 +1,8 @@
-## Interface: 120000, 120001, 120005, 120007
+## Interface: 120000, 120001, 120005, 120007, 120100
 ## Title: SplitWatch
 ## Notes: Auto-split a 20-man raid into 2 balanced teams (tanks/healers/DPS) for split-mechanic fights
 ## Author: Timikana
-## Version: 0.3.4
+## Version: 0.3.5
 ## IconTexture: Interface\Icons\Achievement_PVP_A_A
 ## SavedVariables: SplitWatchDB
 ## AllowAddOnTableAccess: 1

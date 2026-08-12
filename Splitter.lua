@@ -108,14 +108,12 @@ function Splitter:Compute(roster)
     applyLockTag(roster.healers)
     applyLockTag(roster.dps)
 
-    -- Tanks: respect lock first, otherwise alternate (1→A, 2→B, 3→A …).
-    local autoTankIdx = 0
+    -- Tanks: respect lock first, otherwise place on whichever team has
+    -- FEWER tanks so far (tie → A). This guarantees an even split when
+    -- there are 2+ tanks even if some are pre-locked: with one tank
+    -- locked to A, the second unlocked tank goes to B automatically.
     for _, t in ipairs(roster.tanks) do
-        local target = t.locked
-        if not target then
-            autoTankIdx = autoTankIdx + 1
-            target = (autoTankIdx % 2 == 1) and "A" or "B"
-        end
+        local target = t.locked or (tanksA <= tanksB and "A" or "B")
         t.team = target
         if target == "A" then
             table.insert(A, t); tanksA = tanksA + 1
