@@ -403,6 +403,14 @@ L["• Fix: Apply was failing with \"group is full\" when a target subgroup alre
 L["• Apply minimises moves: players whose current subgroup is already in their team's target groups stay put rather than being shuffled around."] =
     "• Apply minimise les déplacements : les joueurs dont le sous-groupe actuel fait déjà partie des groupes cibles de leur équipe restent en place plutôt que d'être déplacés inutilement."
 
+-- v0.3.5
+L["• Patch 12.1 compatibility — TOC bumped (120100 retail, 50504 MoP Classic). Full 12.1 API audit: nothing SplitWatch uses is broken; the new secret-value returns on group APIs never apply to your own raid members."] =
+    "• Compatibilité patch 12.1 — TOC mis à jour (120100 retail, 50504 MoP Classic). Audit complet de l'API 12.1 : rien de ce que SplitWatch utilise n'est cassé ; les nouvelles valeurs secrètes sur les API de groupe ne s'appliquent jamais aux membres de ton propre raid."
+L["• Fix: Details! reader falls back to the raw actor container when GetActorList returns empty (post-/reload states), and probes internal combat fields as a last resort."] =
+    "• Fix : le lecteur Details! retombe sur le conteneur d'acteurs brut quand GetActorList renvoie vide (états post-/reload), et sonde les champs de combat internes en dernier recours."
+L["• Fix: tank balancing with locks — an unlocked tank now goes to the team with FEWER tanks instead of strict A/B alternation, so one tank locked to A no longer risks putting both tanks on A."] =
+    "• Fix : équilibrage des tanks avec verrouillages — un tank libre va désormais sur l'équipe avec le MOINS de tanks au lieu d'une alternance stricte A/B ; un tank verrouillé sur A ne risque plus de mettre les deux tanks sur A."
+
 -- v0.3.4
 L["• Fix: Details! source preview was empty when the current combat had no actors yet. The reader now probes multiple combat segments and uses the first one with data."] =
     "• Fix : l'aperçu de la source Details! était vide quand le combat courant n'avait pas encore d'acteurs. Le lecteur sonde maintenant plusieurs segments et garde le premier avec des données."

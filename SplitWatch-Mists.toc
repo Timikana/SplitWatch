@@ -1,8 +1,8 @@
-## Interface: 50500
+## Interface: 50500, 50504
 ## Title: SplitWatch
 ## Notes: Auto-split a 20-man raid into 2 balanced teams (tanks/healers/DPS) for split-mechanic fights
 ## Author: Timikana
-## Version: 0.3.4
+## Version: 0.3.5
 ## IconTexture: Interface\Icons\Achievement_PVP_A_A
 ## SavedVariables: SplitWatchDB
 ## X-Curse-Project-ID: 1541355

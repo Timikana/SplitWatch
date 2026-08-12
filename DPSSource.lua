@@ -108,26 +108,43 @@ end
 -- preview still shows DPS/HPS after a fight ends.
 -- ============================================================
 local function _detailsCombat()
-    local Details = _G.Details
+    local Details = _G.Details or _G._detalhes
     if not Details then return nil end
-    -- Try multiple combat sources and pick the first one that actually has
-    -- actors. Details' API has shifted over versions and the "right" segment
-    -- depends on whether the user is currently fighting, just out of combat,
-    -- or looking at the overall window. Probe each candidate, returning the
-    -- first that returns a non-empty actor list.
     local function tryGet(getter)
         local ok, c = pcall(getter)
         if ok and type(c) == "table" then return c end
         return nil
     end
+    -- A combat is "non-empty" if either its public actor list OR its raw
+    -- container index has actor entries with a name. On retail 12.0 the
+    -- public GetActorList sometimes returns an empty array even when the
+    -- raw container c[1]/c[2] holds Combat actor objects.
     local function hasActors(c)
-        if not c or not c.GetActorList then return false end
-        for _, attr in ipairs({1, 2}) do
-            local ok, list = pcall(c.GetActorList, c, attr)
-            if ok and type(list) == "table" and #list > 0 then return true end
+        if type(c) ~= "table" then return false end
+        if c.GetActorList then
+            for _, attr in ipairs({1, 2}) do
+                local ok, list = pcall(c.GetActorList, c, attr)
+                if ok and type(list) == "table" and #list > 0 then return true end
+            end
+        end
+        for _, idx in ipairs({1, 2}) do
+            local cont = c[idx]
+            if type(cont) == "table" then
+                local arr = cont._ActorTable or cont
+                if type(arr) == "table" then
+                    for _, v in pairs(arr) do
+                        if type(v) == "table" and (v.nome or v.name) then return true end
+                    end
+                end
+            end
         end
         return false
     end
+    -- Probe a wide set of segment getters AND internal fields. The order
+    -- matters: prefer current/recent over overall, prefer public API over
+    -- internal table access. Each version of Details / each install state
+    -- (post-/reload, mid-combat, post-combat, freshly-loaded) populates a
+    -- different subset of these — we accept the first that has actors.
     local candidates = {
         function() return Details:GetCurrentCombat() end,
         function() return Details:GetCombat(0) end,
@@ -135,10 +152,10 @@ local function _detailsCombat()
         function() return Details:GetCombat(2) end,
         function() return Details:GetCombat("overall") end,
         function() return Details:GetCombat(-1) end,
+        function() return Details.tabela_vigente end,
+        function() return Details.current_combat end,
+        function() return Details.tabela_overall end,
     }
-    -- Best-data preference: prefer a candidate with actors. As a last resort
-    -- (no candidate has actors), still return the current combat so callers
-    -- can at least see "combat exists but is empty".
     local fallback
     for _, getter in ipairs(candidates) do
         local c = tryGet(getter)
@@ -152,9 +169,25 @@ end
 
 local function _detailsActors(combat, attr)
     if not combat then return nil end
+    -- Public API path
     if combat.GetActorList then
         local ok, list = pcall(combat.GetActorList, combat, attr)
-        if ok and type(list) == "table" then return list end
+        if ok and type(list) == "table" and #list > 0 then return list end
+    end
+    -- Raw container fallback: combat[attr] is a Container; its _ActorTable
+    -- (or the container itself in some versions) holds the actor objects.
+    local cont = combat[attr]
+    if type(cont) == "table" then
+        local arr = cont._ActorTable or cont
+        if type(arr) == "table" then
+            local out = {}
+            for _, v in pairs(arr) do
+                if type(v) == "table" and (v.nome or v.name) then
+                    out[#out + 1] = v
+                end
+            end
+            if #out > 0 then return out end
+        end
     end
     return nil
 end

@@ -129,6 +129,12 @@ function O.Pages.about(parent)
     -- ---- Changelog (chained at the bottom) ----
     makeSection(parent, L["Changelog"], 14, -400, "about.changelog")
     local entries = {
+        { ver = "0.3.5", date = "2026-08-12", lines = {
+            L["• Patch 12.1 compatibility — TOC bumped (120100 retail, 50504 MoP Classic). Full 12.1 API audit: nothing SplitWatch uses is broken; the new secret-value returns on group APIs never apply to your own raid members."],
+            L["• Fix: Details! reader falls back to the raw actor container when GetActorList returns empty (post-/reload states), and probes internal combat fields as a last resort."],
+            L["• Fix: tank balancing with locks — an unlocked tank now goes to the team with FEWER tanks instead of strict A/B alternation, so one tank locked to A no longer risks putting both tanks on A."],
+            L["• 0 required addons. Sister addons: BossWatch, TankWatch."],
+        }},
         { ver = "0.3.4", date = "2026-05-14", lines = {
             L["• Fix: Details! source preview was empty when the current combat had no actors yet. The reader now probes multiple combat segments and uses the first one with data."],
             L["• Fix: cross-realm player names (Name-Realm) now match correctly against meters that store them as short names — both forms are tried."],

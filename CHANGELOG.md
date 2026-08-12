@@ -6,6 +6,17 @@ versionnage selon [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-08-12
+
+### Changé
+- **Compatibilité patch 12.1** — Interface TOC mis à jour (`120100` retail, `50504` MoP Classic). Audit des changements API 12.1 : aucune API utilisée par SplitWatch n'est cassée. Les fonctions `UnitGroupRolesAssigned` / `UnitIsGroupLeader` / `UnitIsGroupAssistant` peuvent désormais renvoyer des valeurs secrètes **quand l'identité de l'unité est secrète** — jamais le cas pour les membres de son propre raid ni pour `"player"`, donc aucun impact.
+
+### Corrigé
+- **Lecture Details! : fallback conteneur brut** — sur certains états (12.0+, juste après un /reload), `GetActorList` renvoie une liste vide alors que le conteneur interne (`_ActorTable`) contient bien les acteurs. Le lecteur retombe maintenant sur le conteneur brut, sonde aussi les champs internes (`tabela_vigente`, `current_combat`, `tabela_overall`) et le global legacy `_detalhes`.
+- **Équilibrage des tanks avec verrouillages** — un tank non verrouillé va désormais sur l'équipe qui a le **moins** de tanks (égalité → A), au lieu d'une alternance stricte A/B. Avant : avec un tank verrouillé sur A, le second tank libre pouvait aussi tomber sur A → 2/0.
+
+- **0 addons requis**. Sister addons : BossWatch, TankWatch.
+
 ## [0.3.4] - 2026-05-14
 
 ### Corrigé
